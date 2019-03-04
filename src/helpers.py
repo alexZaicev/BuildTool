@@ -4,9 +4,7 @@ import subprocess
 import sys
 from datetime import datetime
 
-"""
-    Directories
-"""
+# DIRECTORIES
 isWin = False
 isUnix = False
 
@@ -26,13 +24,16 @@ elif isUnix:
 
 
 class Helpers:
-    BUILD_RULES = list()
+    """
+        Build Tool Helper singleton
+    """
+
+    PRE_BUILD_RULES = list()
+    POST_BUILD_RULES = list()
     RULE_INITIALIZER = None
     CONFIGURATION = None
 
-    """
-        Terminal Colors
-    """
+    # TERMINAL COLORS
     RED = "\033[1;31m"
     BLUE = "\033[1;34m"
     CYAN = "\033[1;36m"
@@ -41,28 +42,17 @@ class Helpers:
     BOLD = "\033[;1m"
     REVERSE = "\033[;7m"
 
-    """
-        Git Commands
-    """
-    GIT_CLONE = "git clone %s"
-    GIT_FETCH = "git fetch"
-    GIT_PULL = "git pull origin %s"
-    GIT_CHECKOUT = "git checkout %s"
-
-    """
-        {NS} commands
-    """
-    TNS_VERSION = "tns --version"
-    TNS_INSTALL = "tns install"
-    TNS_BUILD = "tns build %s"
-    TNS_TEST = "tns test %s"
-    ANDROID = "android"
-    IOS = "ios"
-
-    """
-        COMMANDS
-    """
+    # COMMANDS
     CMD_GIT_CLONE = "CMD_0"
+    CMD_GIT_FETCH = "CMD_1"
+    CMD_GIT_CHECKOUT = "CMD_2"
+    CMD_GIT_PULL = "CMD_3"
+    CMD_TNS_VERSION = "CMD_4"
+    CMD_TNS_INSTALL = "CMD_5"
+    CMD_TNS_BUILD_ANDROID = "CMD_6"
+    CMD_TNS_BUILD_IOS = "CMD_7"
+    CMD_TNS_TEST_ANDROID = "CMD_8"
+    CMD_TNS_TEST_IOS = "CMD_9"
 
     @staticmethod
     def cmd_list(cmd):
@@ -94,11 +84,19 @@ class Helpers:
         return sa[len(sa) - 1].split(".")[0]
 
     @staticmethod
-    def execute_build_rules():
+    def execute_pre_build_rules():
         """
-            Build rules executor
+            Pre-Build rules executor
         """
-        for br in Helpers.BUILD_RULES:
+        for br in Helpers.PRE_BUILD_RULES:
+            br.execute_rule()
+
+    @staticmethod
+    def execute_post_build_rules():
+        """
+            Pre-Build rules executor
+        """
+        for br in Helpers.POST_BUILD_RULES:
             br.execute_rule()
 
     @staticmethod
@@ -181,14 +179,15 @@ class Helpers:
         print(Helpers.RESET)
 
     @staticmethod
-    def perform_command(cmd=list(), shell=False):
+    def perform_command(cmd=tuple(), shell=None):
         """
             Shell command executor
 
             :param cmd: Command, option and argument list
             :param shell:  Is shell command
         """
-
+        if shell is None:
+            shell = isWin and not isUnix
         try:
             out = subprocess.check_output(cmd, shell=shell)
             return False, str(out, "UTF-8")

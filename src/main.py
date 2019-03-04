@@ -6,9 +6,6 @@ from commands import CommandFactory
 from interfaces import BuildToolError, RuleInitializer
 
 
-# a8fad7ba40c641658ab5e4db1332c139fb0376a0
-
-
 def main():
     check_dirs()
     Helpers.CONFIGURATION = Helpers.read_config()
@@ -16,10 +13,10 @@ def main():
     Helpers.RULE_INITIALIZER.initialize()
     # init first run
     job()
-    # run every 10 minutes
-    # schedule.every(Helpers.CONFIGURATION.get("build").get("timer")).minutes.do(job)
-    # while True:
-    #     schedule.run_pending()
+    # configure scheduler
+    schedule.every(Helpers.CONFIGURATION.get("build").get("timer")).minutes.do(job)
+    while True:
+        schedule.run_pending()
 
 
 def check_dirs():
@@ -47,105 +44,35 @@ def job():
 
 
 def do_git():
-    # GIT CLONE
     cmd = CommandFactory.get_command(Helpers.CMD_GIT_CLONE)
     cmd.execute()
-    # Helpers.print_with_stamp("STARTING GIT CLONE")
-    # git_url = Helpers.parse_repo(Helpers.CONFIGURATION.get("repository"), Helpers.CONFIGURATION.get("username"),
-    #                              Helpers.CONFIGURATION.get("token"))
-    # failed, out = Helpers.perform_command(cmd=Helpers.cmd_list(Helpers.GIT_CLONE % git_url), shell=True)
-    # if failed:
-    #     raise BuildToolError(
-    #         "Failed to clone repository: %s." % Helpers.CONFIGURATION.get("repository"))
-    # else:
-    #     Helpers.print_with_stamp(out)
-    # os.chdir(Helpers.WORKSPACE + Helpers.get_repo_name(Helpers.CONFIGURATION.get("repository")))
-
-    # GIT FETCH
-    Helpers.print_with_stamp("STARTING GIT FETCH")
-    failed, out = Helpers.perform_command(cmd=Helpers.cmd_list(Helpers.GIT_FETCH), shell=True)
-    if failed:
-        raise BuildToolError("Failed to fetch from repository.")
-    else:
-        Helpers.print_with_stamp(out)
-
-    # GIT CHECKOUT
-    Helpers.print_with_stamp("STARTING GIT CHECKOUT")
-    failed, out = Helpers.perform_command(
-        cmd=Helpers.cmd_list(Helpers.GIT_CHECKOUT % Helpers.CONFIGURATION.get("branch")),
-        shell=True)
-    if failed:
-        raise BuildToolError(
-            "Failed to checkout to branch [%s]." % Helpers.CONFIGURATION.get("branch"))
-    else:
-        Helpers.print_with_stamp(out)
-
-    # GIT PULL
-    Helpers.print_with_stamp("STARTING GIT PULL")
-    failed, out = Helpers.perform_command(cmd=Helpers.cmd_list(Helpers.GIT_PULL % Helpers.CONFIGURATION.get("branch")),
-                                          shell=True)
-    if failed:
-        raise BuildToolError(
-            "Failed to pull from branch [%s]." % Helpers.CONFIGURATION.get("branch"))
-    else:
-        Helpers.print_with_stamp(out)
+    cmd = CommandFactory.get_command(Helpers.CMD_GIT_FETCH)
+    cmd.execute()
+    cmd = CommandFactory.get_command(Helpers.CMD_GIT_CHECKOUT)
+    cmd.execute()
+    cmd = CommandFactory.get_command(Helpers.CMD_GIT_PULL)
+    cmd.execute()
 
 
 def do_job():
-    # CHECK IF {NS} IS PRESENT BY CHECKING VERSION
-    Helpers.print_with_stamp("STARTING {NS} VERSION CHECK")
-    failed, out = Helpers.perform_command(cmd=Helpers.TNS_VERSION, shell=True)
-    if failed:
-        raise BuildToolError("Check if {NS} is installed on your machine")
-    else:
-        Helpers.print_with_stamp(out)
+    cmd = CommandFactory.get_command(Helpers.CMD_TNS_VERSION)
+    cmd.execute()
+    cmd = CommandFactory.get_command(Helpers.CMD_TNS_INSTALL)
+    cmd.execute()
 
-    # {NS} INSTALL DEPENDENCIES
-    Helpers.print_with_stamp("STARTING {NS} INSTALL")
-    failed, out = Helpers.perform_command(cmd=Helpers.TNS_INSTALL, shell=True)
-    if failed:
-        raise BuildToolError("{NS} failed to install project dependencies")
-    else:
-        Helpers.print_with_stamp(out)
+    Helpers.execute_pre_build_rules()
 
-    # EXECUTE BUILD SPECIFIC RULES
-    Helpers.print_with_stamp("EXECUTING BUILD RULES")
-    Helpers.execute_build_rules()
+    cmd = CommandFactory.get_command(Helpers.CMD_TNS_BUILD_ANDROID)
+    cmd.execute()
+    cmd = CommandFactory.get_command(Helpers.CMD_TNS_BUILD_IOS)
+    cmd.execute()
 
-    # {NS} BUILD AND TEST
-    if Helpers.CONFIGURATION.get("build").get("android").get("build"):
-        Helpers.print_with_stamp("STARTING BUILD ANDROID")
-        failed, out = Helpers.perform_command(cmd=(Helpers.TNS_BUILD % Helpers.ANDROID), shell=True)
-        if failed:
-            raise BuildToolError("{NS} failed to build project for android")
-        else:
-            Helpers.print_with_stamp(out)
+    Helpers.execute_post_build_rules()
 
-        # ANDROID TEST
-        Helpers.print_with_stamp("STARTING TEST ANDROID")
-        if Helpers.CONFIGURATION.get("build").get("android").get("test"):
-            failed, out = Helpers.perform_command(cmd=(Helpers.TNS_TEST % Helpers.ANDROID), shell=True)
-            if failed:
-                raise BuildToolError("{NS} failed to test project for android")
-            else:
-                Helpers.print_with_stamp(out)
-
-    if Helpers.CONFIGURATION.get("build").get("ios").get("build"):
-        Helpers.print_with_stamp("STARTING BUILD IOS")
-        failed, out = Helpers.perform_command(cmd=(Helpers.TNS_BUILD % Helpers.IOS), shell=True)
-        if failed:
-            raise BuildToolError("{NS} failed to build project for iOS")
-        else:
-            Helpers.print_with_stamp(out)
-
-        # IOS TEST
-        Helpers.print_with_stamp("STARTING BUILD IOS")
-        if Helpers.CONFIGURATION.get("build").get("android").get("test"):
-            failed, out = Helpers.perform_command(cmd=(Helpers.TNS_TEST % Helpers.IOS), shell=True)
-            if failed:
-                raise BuildToolError("{NS} failed to test project for iOS")
-            else:
-                Helpers.print_with_stamp(out)
+    cmd = CommandFactory.get_command(Helpers.CMD_TNS_TEST_ANDROID)
+    cmd.execute()
+    cmd = CommandFactory.get_command(Helpers.CMD_TNS_TEST_IOS)
+    cmd.execute()
 
 
 if __name__ == "__main__":

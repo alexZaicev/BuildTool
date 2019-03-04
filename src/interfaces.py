@@ -31,11 +31,7 @@ class Rule(ABC):
         ABC.__init__(self)
         if name is None:
             raise BuildToolError("Rule name cannot be None")
-        for br in Helpers.BUILD_RULES:
-            if br.name == name:
-                raise BuildToolError("Rule with name %s already exists" % name)
         self.name = name
-        Helpers.BUILD_RULES.append(self)
 
     @abstractmethod
     def execute_rule(self):
@@ -78,3 +74,39 @@ class RuleInitializer(Initializer):
 
     def __init__(self):
         Initializer.__init__(self)
+
+
+class PreBuildRule(Rule):
+    """
+        Build Tool rule object to store project specific build logic that will be executed
+        before project build
+    """
+
+    def __init__(self, name=None):
+        Rule.__init__(self, name)
+        for br in Helpers.PRE_BUILD_RULES:
+            if br.name == name:
+                raise BuildToolError("Rule with name %s already exists" % name)
+        Helpers.PRE_BUILD_RULES.append(self)
+
+    @abstractmethod
+    def execute_rule(self):
+        raise BuildToolError("Rule logic has not been implemented")
+
+
+class PostBuildRule(Rule):
+    """
+        Build Tool rule object to store project specific build logic that will be executed
+        after project build
+    """
+
+    def __init__(self, name=None):
+        Rule.__init__(self, name)
+        for br in Helpers.POST_BUILD_RULES:
+            if br.name == name:
+                raise BuildToolError("Rule with name %s already exists" % name)
+        Helpers.POST_BUILD_RULES.append(self)
+
+    @abstractmethod
+    def execute_rule(self):
+        raise BuildToolError("Rule logic has not been implemented")
