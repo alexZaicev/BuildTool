@@ -1,6 +1,7 @@
 import os
 
 import schedule
+import time
 from helpers import Helpers
 from helpers import ROOT, WORKSPACE, CONFIG_FILE
 from commands import CommandFactory
@@ -18,6 +19,7 @@ def main():
     schedule.every(Helpers.CONFIGURATION.get("build").get("timer")).minutes.do(job)
     while True:
         schedule.run_pending()
+        time.sleep(10)
 
 
 def check_dirs():
