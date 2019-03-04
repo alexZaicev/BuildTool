@@ -1,5 +1,6 @@
 import os
 
+import schedule
 from helpers import Helpers
 from helpers import ROOT, WORKSPACE, CONFIG_FILE
 from commands import CommandFactory
