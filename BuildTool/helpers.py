@@ -3,7 +3,6 @@ import os
 import subprocess
 import sys
 from datetime import datetime
-from plyer import notification
 
 # DIRECTORIES
 isWin = False
@@ -11,7 +10,7 @@ isUnix = False
 
 if sys.platform.lower() == "win32" or sys.platform.lower() == "cygwin":
     isWin = True
-elif sys.platform.lower() == "linux" or sys.platform.lower() == "darwin":
+elif "linux" in sys.platform.lower() or "darwin" in sys.platform.lower():
     isUnix = True
 
 if isWin:
@@ -186,13 +185,13 @@ class Helpers:
                 Helpers.print_with_stamp(msg)
             print("\n\n%s  BUILD FAILED\n" % Helpers.RED)
 
-            Helpers.send_notification(title="Build Tool Notification", msg="Build Failed. See logs for more details")
+            Helpers.send_notification(msg="Build Failed\nSee logs for more details")
         else:
             if msg is not None:
                 Helpers.print_with_stamp(msg)
             print("\n\n%s BUILD SUCCESS\n" % Helpers.GREEN)
 
-            Helpers.send_notification(title="Builder Success", msg="Initializing Jobs")
+            Helpers.send_notification(msg="Build Success\nSee logs for more details")
         print(Helpers.RESET)
 
     @staticmethod
@@ -208,6 +207,13 @@ class Helpers:
         try:
             out = subprocess.check_output(cmd, shell=shell)
             return False, str(out, "UTF-8")
+            # sp = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            # while True:
+            #     line = sp.stdout.readline()
+            #     if not line:
+            #         break
+            #     print(str(line, "UTF-8"))
+            # return False, ""
         except subprocess.CalledProcessError as ex:
             return True, str(ex)
 
@@ -237,10 +243,15 @@ class Helpers:
             raise interfaces.BuildToolError("Build Tool not configured")
 
     @staticmethod
-    def send_notification(title, msg):
-        notification.notify(
-            title=title,
-            message=msg,
-            app_name="BuildTool",
-            app_icon=os.path.join(PROJECT_DIR, "helmet.ico")
-        )
+    def send_notification(msg):
+        title = "Build Tool Notification"
+        if isWin:
+            from win10toast import ToastNotifier
+            tn = ToastNotifier()
+            tn.show_toast(title=title, msg=msg)
+        elif isUnix:
+            import pync
+            if "linux" in sys.platform.lower():
+                Helpers.perform_command(cmd=("notify-send", title, msg), shell=False)
+            else:
+                pync.notify(msg, title=title)

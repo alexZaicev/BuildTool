@@ -9,7 +9,7 @@ from interfaces import BuildToolError, RuleInitializer, JobInitializer
 
 
 def main():
-    Helpers.send_notification(title="Builder Started", msg="Initializing Build Tool Environment")
+    Helpers.send_notification(msg="Initializing Build Tool Environment")
 
     Helpers.check_dirs()
     Helpers.CONFIGURATION = Helpers.read_config()

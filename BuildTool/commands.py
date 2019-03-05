@@ -53,7 +53,11 @@ class GitCloneCommand(Command):
                 "Failed to clone repository: %s." % Helpers.CONFIGURATION.get("repository"))
         else:
             Helpers.print_with_stamp(out)
-        os.chdir(WORKSPACE + Helpers.get_repo_name(Helpers.CONFIGURATION.get("repository")))
+        try:
+            os.chdir(WORKSPACE + Helpers.get_repo_name(Helpers.CONFIGURATION.get("repository")))
+        except FileNotFoundError:
+            raise BuildToolError(
+                "Failed to clone repository: %s." % Helpers.CONFIGURATION.get("repository"))
 
     def __init__(self):
         Command.__init__(self)
