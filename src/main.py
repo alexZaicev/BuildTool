@@ -18,10 +18,9 @@ def main():
 
     job_init = JobInitializer()
     job_init.initialize()
-    # init first run
-    job()
     # configure scheduler
     schedule.every(Helpers.CONFIGURATION.get("build").get("nativescript").get("timer")).minutes.do(job)
+    schedule.run_all(5)
     while True:
         schedule.run_pending()
         time.sleep(10)
