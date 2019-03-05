@@ -110,3 +110,49 @@ class PostBuildRule(Rule):
     @abstractmethod
     def execute_rule(self):
         raise BuildToolError("Rule logic has not been implemented")
+
+
+class Job(ABC):
+
+    def __init__(self, job_type, name):
+        if job_type is None:
+            raise BuildToolError("Job type cannot be None")
+        for job in Helpers.JOBS:
+            if job.name == name:
+                raise BuildToolError("Job with name %s already exists" % name)
+        self.name = name
+        self.type = job_type
+        Helpers.JOBS.append(self)
+
+    @abstractmethod
+    def work(self):
+        raise BuildToolError("Job work not implemented")
+
+
+class JobInitializer(Initializer):
+    """
+        Build tool custom built rule initializer class
+    """
+
+    def initialize(self):
+        import jobs
+        # CHECK FOR GIT CONFIG
+        if Helpers.CONFIGURATION.get("repository") is not None and \
+                Helpers.CONFIGURATION.get("branch") is not None and \
+                Helpers.CONFIGURATION.get("username") is not None and \
+                Helpers.CONFIGURATION.get("token") is not None:
+            jobs.GitJob()
+        else:
+            raise BuildToolError("Cannot create Git job. Check your configuration file and re-run Build Tool")
+        # CHECK FOR {NS} CONFIG
+        if Helpers.CONFIGURATION.get("build").get("nativescript").get("enabled") is not None and \
+                Helpers.CONFIGURATION.get("build").get("nativescript").get("enabled") and \
+                Helpers.CONFIGURATION.get("build").get("nativescript").get("timer") is not None and \
+                Helpers.CONFIGURATION.get("build").get("nativescript").get("android").get("build") is not None and \
+                Helpers.CONFIGURATION.get("build").get("nativescript").get("android").get("test") is not None and \
+                Helpers.CONFIGURATION.get("build").get("nativescript").get("ios").get("build") is not None and \
+                Helpers.CONFIGURATION.get("build").get("nativescript").get("ios").get("test") is not None:
+            jobs.TnsJob()
+
+    def __init__(self):
+        Initializer.__init__(self)

@@ -5,9 +5,19 @@ from interfaces import Utils, BuildToolError, Command
 
 
 class CommandFactory(Utils):
+    """
+        Command Factory Singleton
+    """
 
     @staticmethod
     def get_command(cmd_type):
+        """
+            Method ro create new Build Tool command
+
+            :param cmd_type: Command type
+            :return: Build Tool Command
+        """
+
         commands = {
             Helpers.CMD_GIT_CLONE: GitCloneCommand,
             Helpers.CMD_GIT_FETCH: GitFetchCommand,
@@ -27,6 +37,10 @@ class CommandFactory(Utils):
 
 
 class GitCloneCommand(Command):
+    """
+        Git Clone Command:
+            git clone {url}
+    """
 
     def execute(self):
         Helpers.print_with_stamp("STARTING GIT CLONE")
@@ -46,6 +60,10 @@ class GitCloneCommand(Command):
 
 
 class GitFetchCommand(Command):
+    """
+        Git Fetch Command:
+            git fetch
+    """
 
     def execute(self):
         Helpers.print_with_stamp("STARTING GIT FETCH")
@@ -60,6 +78,10 @@ class GitFetchCommand(Command):
 
 
 class GitCheckoutCommand(Command):
+    """
+        Git Checkout Command:
+            git checkout {branch}
+    """
 
     def execute(self):
         Helpers.print_with_stamp("STARTING GIT CHECKOUT")
@@ -76,6 +98,10 @@ class GitCheckoutCommand(Command):
 
 
 class GitPullCommand(Command):
+    """
+        Git Pull Command:
+            git pull origin {branch}
+    """
 
     def execute(self):
         Helpers.print_with_stamp("STARTING GIT PULL")
@@ -92,6 +118,11 @@ class GitPullCommand(Command):
 
 
 class TnsVersionCommand(Command):
+    """
+        {NS} Version Command:
+            tns --version
+    """
+
     def execute(self):
         # CHECK IF {NS} IS PRESENT BY CHECKING VERSION
         Helpers.print_with_stamp("STARTING {NS} VERSION CHECK")
@@ -106,6 +137,11 @@ class TnsVersionCommand(Command):
 
 
 class TnsInstallCommand(Command):
+    """
+        {NS} Install Command:
+            tns install
+    """
+
     def execute(self):
         # {NS} INSTALL DEPENDENCIES
         Helpers.print_with_stamp("STARTING {NS} INSTALL")
@@ -120,10 +156,14 @@ class TnsInstallCommand(Command):
 
 
 class TnsBuildAndroidCommand(Command):
+    """
+        {NS} Build Android Command:
+            tns build android
+    """
 
     def execute(self):
         # ANDROID BUILD
-        if Helpers.CONFIGURATION.get("build").get("android").get("build"):
+        if Helpers.CONFIGURATION.get("build").get("nativescript").get("android").get("build"):
             Helpers.print_with_stamp("STARTING BUILD ANDROID")
             failed, out = Helpers.perform_command(cmd=("tns build %s" % "android"), shell=True)
             if failed:
@@ -138,10 +178,14 @@ class TnsBuildAndroidCommand(Command):
 
 
 class TnsBuildIosCommand(Command):
+    """
+        {NS} Build iOS Command:
+            tns build ios
+    """
 
     def execute(self):
         # IOS BUILD
-        if Helpers.CONFIGURATION.get("build").get("ios").get("build"):
+        if Helpers.CONFIGURATION.get("build").get("nativescript").get("ios").get("build"):
             Helpers.print_with_stamp("STARTING BUILD IOS")
             failed, out = Helpers.perform_command(cmd=("tns build %s" % "ios"), shell=True)
             if failed:
@@ -156,10 +200,14 @@ class TnsBuildIosCommand(Command):
 
 
 class TnsTestAndroidCommand(Command):
+    """
+        {NS} Test Android Command:
+            tns test android
+    """
 
     def execute(self):
         # ANDROID TEST
-        if Helpers.CONFIGURATION.get("build").get("android").get("test"):
+        if Helpers.CONFIGURATION.get("build").get("nativescript").get("android").get("test"):
             Helpers.print_with_stamp("STARTING TEST ANDROID")
             failed, out = Helpers.perform_command(cmd=("tns test %s" % "android"), shell=True)
             if failed:
@@ -174,10 +222,14 @@ class TnsTestAndroidCommand(Command):
 
 
 class TnsTestIosCommand(Command):
+    """
+        {NS} Test iOS Command:
+            tns test iOS
+    """
 
     def execute(self):
         # ANDROID TEST
-        if Helpers.CONFIGURATION.get("build").get("ios").get("test"):
+        if Helpers.CONFIGURATION.get("build").get("nativescript").get("ios").get("test"):
             Helpers.print_with_stamp("STARTING TEST IOS")
             failed, out = Helpers.perform_command(cmd=("tns test %s" % "ios"), shell=True)
             if failed:
@@ -189,8 +241,3 @@ class TnsTestIosCommand(Command):
 
     def __init__(self):
         Command.__init__(self)
-
-
-
-
-

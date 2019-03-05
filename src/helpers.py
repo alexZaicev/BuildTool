@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime
+from plyer import notification
 
 # DIRECTORIES
 isWin = False
@@ -22,6 +23,8 @@ elif isUnix:
     WORKSPACE = ROOT + "Workspace/"
     CONFIG_FILE = ROOT + "config.json"
 
+PROJECT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__))[:-4], "resources")
+
 
 class Helpers:
     """
@@ -30,8 +33,8 @@ class Helpers:
 
     PRE_BUILD_RULES = list()
     POST_BUILD_RULES = list()
-    RULE_INITIALIZER = None
     CONFIGURATION = None
+    JOBS = list()
 
     # TERMINAL COLORS
     RED = "\033[1;31m"
@@ -53,6 +56,10 @@ class Helpers:
     CMD_TNS_BUILD_IOS = "CMD_7"
     CMD_TNS_TEST_ANDROID = "CMD_8"
     CMD_TNS_TEST_IOS = "CMD_9"
+
+    # JOB TYPES
+    JOB_GIT = "JOB_0"
+    JOB_TNS = "JOB_1"
 
     @staticmethod
     def cmd_list(cmd):
@@ -119,19 +126,21 @@ class Helpers:
         """
 
         config = {
-            "repository": "",
-            "branch": "",
-            "username": "",
-            "token": "",
+            "repository": None,
+            "branch": "master",
+            "username": None,
+            "token": None,
             "build": {
-                "timer": 10,
-                "android": {
-                    "build": False,
-                    "test": False
-                },
-                "ios": {
-                    "build": False,
-                    "test": False
+                "nativescript": {
+                    "timer": 10,
+                    "android": {
+                        "build": False,
+                        "test": False
+                    },
+                    "ios": {
+                        "build": False,
+                        "test": False
+                    }
                 }
             }
         }
@@ -143,11 +152,15 @@ class Helpers:
     def read_config():
         """
             Configuration file reader
+
+            :return: Configuration dictionary
         """
 
         with open(CONFIG_FILE, "r") as f:
             cfg = json.load(f)
         f.close()
+        if cfg.get("branch") is None:
+            cfg["branch"] = "master"
         return cfg
 
     @staticmethod
@@ -172,10 +185,14 @@ class Helpers:
             if msg is not None:
                 Helpers.print_with_stamp(msg)
             print("\n\n%s  BUILD FAILED\n" % Helpers.RED)
+
+            Helpers.send_notification(title="Build Tool Notification", msg="Build Failed. See logs for more details")
         else:
             if msg is not None:
                 Helpers.print_with_stamp(msg)
             print("\n\n%s BUILD SUCCESS\n" % Helpers.GREEN)
+
+            Helpers.send_notification(title="Builder Success", msg="Initializing Jobs")
         print(Helpers.RESET)
 
     @staticmethod
@@ -193,3 +210,37 @@ class Helpers:
             return False, str(out, "UTF-8")
         except subprocess.CalledProcessError as ex:
             return True, str(ex)
+
+    @staticmethod
+    def trigger_jobs():
+        """
+            Method to execute active jobs
+        """
+        for job in Helpers.JOBS:
+            job.work()
+
+    @staticmethod
+    def check_dirs():
+        """
+            Workspace hierarchy checker
+        """
+
+        import interfaces
+        if not os.path.exists(ROOT):
+            os.mkdir(ROOT)
+            os.mkdir(WORKSPACE)
+        elif not os.path.exists(WORKSPACE):
+            os.mkdir(WORKSPACE)
+            Helpers.create_config()
+        elif not os.path.exists(CONFIG_FILE):
+            Helpers.create_config()
+            raise interfaces.BuildToolError("Build Tool not configured")
+
+    @staticmethod
+    def send_notification(title, msg):
+        notification.notify(
+            title=title,
+            message=msg,
+            app_name="BuildTool",
+            app_icon=os.path.join(PROJECT_DIR, "helmet.ico")
+        )
