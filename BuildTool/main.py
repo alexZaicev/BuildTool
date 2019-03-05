@@ -5,25 +5,24 @@ import schedule
 
 from helpers import Helpers
 from helpers import WORKSPACE
-from interfaces import BuildToolError, RuleInitializer, JobInitializer
+from interfaces import BuildToolError, JobInitializer
 
 
 def main():
     Helpers.send_notification(msg="Initializing Build Tool Environment")
-
-    Helpers.check_dirs()
-    Helpers.CONFIGURATION = Helpers.read_config()
-    rule_init = RuleInitializer()
-    rule_init.initialize()
-
-    job_init = JobInitializer()
-    job_init.initialize()
-    # configure scheduler
-    schedule.every(Helpers.CONFIGURATION.get("build").get("nativescript").get("timer")).minutes.do(job)
-    schedule.run_all(5)
-    while True:
-        schedule.run_pending()
-        time.sleep(10)
+    try:
+        Helpers.check_dirs()
+        Helpers.CONFIGURATION = Helpers.read_config()
+        job_init = JobInitializer()
+        job_init.initialize()
+        # configure scheduler
+        schedule.every(Helpers.CONFIGURATION.get("build").get("nativescript").get("timer")).minutes.do(job)
+        schedule.run_all(5)
+        while True:
+            schedule.run_pending()
+            time.sleep(10)
+    except BuildToolError as ex:
+        Helpers.print_build_status(msg=str(ex))
 
 
 def job():

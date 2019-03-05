@@ -43,7 +43,7 @@ class GitCloneCommand(Command):
     """
 
     def execute(self):
-        Helpers.print_with_stamp("STARTING GIT CLONE")
+        Helpers.print_with_stamp("STARTING GIT CLONE", Helpers.MSG_INFO)
         git_url = Helpers.parse_repo(Helpers.CONFIGURATION.get("repository"), Helpers.CONFIGURATION.get("username"),
                                      Helpers.CONFIGURATION.get("token"))
         print(git_url)
@@ -52,7 +52,7 @@ class GitCloneCommand(Command):
             raise BuildToolError(
                 "Failed to clone repository: %s." % Helpers.CONFIGURATION.get("repository"))
         else:
-            Helpers.print_with_stamp(out)
+            Helpers.print_with_stamp(out, Helpers.MSG_INFO)
         try:
             os.chdir(WORKSPACE + Helpers.get_repo_name(Helpers.CONFIGURATION.get("repository")))
         except FileNotFoundError:
@@ -70,12 +70,12 @@ class GitFetchCommand(Command):
     """
 
     def execute(self):
-        Helpers.print_with_stamp("STARTING GIT FETCH")
+        Helpers.print_with_stamp("STARTING GIT FETCH", Helpers.MSG_INFO)
         failed, out = Helpers.perform_command(cmd=Helpers.cmd_list("git fetch"))
         if failed:
             raise BuildToolError("Failed to fetch from repository.")
         else:
-            Helpers.print_with_stamp(out)
+            Helpers.print_with_stamp(out, Helpers.MSG_INFO)
 
     def __init__(self):
         Command.__init__(self)
@@ -88,14 +88,14 @@ class GitCheckoutCommand(Command):
     """
 
     def execute(self):
-        Helpers.print_with_stamp("STARTING GIT CHECKOUT")
+        Helpers.print_with_stamp("STARTING GIT CHECKOUT", Helpers.MSG_INFO)
         failed, out = Helpers.perform_command(
             cmd=Helpers.cmd_list("git checkout %s" % Helpers.CONFIGURATION.get("branch")))
         if failed:
             raise BuildToolError(
                 "Failed to checkout to branch [%s]." % Helpers.CONFIGURATION.get("branch"))
         else:
-            Helpers.print_with_stamp(out)
+            Helpers.print_with_stamp(out, Helpers.MSG_INFO)
 
     def __init__(self):
         Command.__init__(self)
@@ -108,14 +108,14 @@ class GitPullCommand(Command):
     """
 
     def execute(self):
-        Helpers.print_with_stamp("STARTING GIT PULL")
+        Helpers.print_with_stamp("STARTING GIT PULL", Helpers.MSG_INFO)
         failed, out = Helpers.perform_command(
             cmd=Helpers.cmd_list("git pull origin %s" % Helpers.CONFIGURATION.get("branch")))
         if failed:
             raise BuildToolError(
                 "Failed to pull from branch [%s]." % Helpers.CONFIGURATION.get("branch"))
         else:
-            Helpers.print_with_stamp(out)
+            Helpers.print_with_stamp(out, Helpers.MSG_INFO)
 
     def __init__(self):
         Command.__init__(self)
@@ -129,12 +129,12 @@ class TnsVersionCommand(Command):
 
     def execute(self):
         # CHECK IF {NS} IS PRESENT BY CHECKING VERSION
-        Helpers.print_with_stamp("STARTING {NS} VERSION CHECK")
+        Helpers.print_with_stamp("STARTING {NS} VERSION CHECK", Helpers.MSG_INFO)
         failed, out = Helpers.perform_command(cmd="tns --version", shell=True)
         if failed:
             raise BuildToolError("Check if {NS} is installed on your machine")
         else:
-            Helpers.print_with_stamp(out)
+            Helpers.print_with_stamp(out, Helpers.MSG_INFO)
 
     def __init__(self):
         Command.__init__(self)
@@ -148,12 +148,12 @@ class TnsInstallCommand(Command):
 
     def execute(self):
         # {NS} INSTALL DEPENDENCIES
-        Helpers.print_with_stamp("STARTING {NS} INSTALL")
+        Helpers.print_with_stamp("STARTING {NS} INSTALL", Helpers.MSG_INFO)
         failed, out = Helpers.perform_command(cmd="tns install", shell=True)
         if failed:
             raise BuildToolError("{NS} failed to install project dependencies")
         else:
-            Helpers.print_with_stamp(out)
+            Helpers.print_with_stamp(out, Helpers.MSG_INFO)
 
     def __init__(self):
         Command.__init__(self)
@@ -168,14 +168,15 @@ class TnsBuildAndroidCommand(Command):
     def execute(self):
         # ANDROID BUILD
         if Helpers.CONFIGURATION.get("build").get("nativescript").get("android").get("build"):
-            Helpers.print_with_stamp("STARTING BUILD ANDROID")
+            Helpers.print_with_stamp("STARTING BUILD ANDROID", Helpers.MSG_INFO)
             failed, out = Helpers.perform_command(cmd=("tns build %s" % "android"), shell=True)
             if failed:
                 raise BuildToolError("{NS} failed to build project for android")
             else:
-                Helpers.print_with_stamp(out)
+                Helpers.print_with_stamp(out, Helpers.MSG_INFO)
         else:
-            Helpers.print_with_stamp("Android build is disabled in configuration file. Enable it and re-run the build")
+            Helpers.print_with_stamp("Android build is disabled in configuration file. Enable it and re-run the build",
+                                     Helpers.MSG_INFO)
 
     def __init__(self):
         Command.__init__(self)
@@ -190,14 +191,15 @@ class TnsBuildIosCommand(Command):
     def execute(self):
         # IOS BUILD
         if Helpers.CONFIGURATION.get("build").get("nativescript").get("ios").get("build"):
-            Helpers.print_with_stamp("STARTING BUILD IOS")
+            Helpers.print_with_stamp("STARTING BUILD IOS", Helpers.MSG_INFO)
             failed, out = Helpers.perform_command(cmd=("tns build %s" % "ios"), shell=True)
             if failed:
                 raise BuildToolError("{NS} failed to build project for iOS")
             else:
-                Helpers.print_with_stamp(out)
+                Helpers.print_with_stamp(out, Helpers.MSG_INFO)
         else:
-            Helpers.print_with_stamp("iOS build is disabled in configuration file. Enable it and re-run the build")
+            Helpers.print_with_stamp("iOS build is disabled in configuration file. Enable it and re-run the build",
+                                     Helpers.MSG_INFO)
 
     def __init__(self):
         Command.__init__(self)
@@ -212,14 +214,15 @@ class TnsTestAndroidCommand(Command):
     def execute(self):
         # ANDROID TEST
         if Helpers.CONFIGURATION.get("build").get("nativescript").get("android").get("test"):
-            Helpers.print_with_stamp("STARTING TEST ANDROID")
+            Helpers.print_with_stamp("STARTING TEST ANDROID", Helpers.MSG_INFO)
             failed, out = Helpers.perform_command(cmd=("tns test %s" % "android"), shell=True)
             if failed:
                 raise BuildToolError("{NS} failed to test project for android")
             else:
-                Helpers.print_with_stamp(out)
+                Helpers.print_with_stamp(out, Helpers.MSG_INFO)
         else:
-            Helpers.print_with_stamp("Android test is disabled in configuration file. Enable it and re-run the build")
+            Helpers.print_with_stamp("Android test is disabled in configuration file. Enable it and re-run the build",
+                                     Helpers.MSG_INFO)
 
     def __init__(self):
         Command.__init__(self)
@@ -234,14 +237,15 @@ class TnsTestIosCommand(Command):
     def execute(self):
         # ANDROID TEST
         if Helpers.CONFIGURATION.get("build").get("nativescript").get("ios").get("test"):
-            Helpers.print_with_stamp("STARTING TEST IOS")
+            Helpers.print_with_stamp("STARTING TEST IOS", Helpers.MSG_INFO)
             failed, out = Helpers.perform_command(cmd=("tns test %s" % "ios"), shell=True)
             if failed:
                 raise BuildToolError("{NS} failed to test project for iOS")
             else:
-                Helpers.print_with_stamp(out)
+                Helpers.print_with_stamp(out, Helpers.MSG_INFO)
         else:
-            Helpers.print_with_stamp("iOS test is disabled in configuration file. Enable it and re-run the build")
+            Helpers.print_with_stamp("iOS test is disabled in configuration file. Enable it and re-run the build",
+                                     Helpers.MSG_INFO)
 
     def __init__(self):
         Command.__init__(self)

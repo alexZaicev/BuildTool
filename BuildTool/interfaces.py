@@ -135,24 +135,46 @@ class JobInitializer(Initializer):
     """
 
     def initialize(self):
+        job_types = {
+            "tns": JobInitializer.__init_tns_job
+        }
+        for job in Helpers.CONFIGURATION["jobs"]:
+            # check for job type
+            try:
+                job_types[job["type"]](job)
+            except AttributeError:
+                raise BuildToolError("Unknown job type %s specified in configuration file" % job["type"])
+
+    @classmethod
+    def __init_tns_job(cls, cfg):
         import jobs
+        if cfg["name"] is None or len(cfg["name"]) == 0:
+            raise BuildToolError("Invalid build name. Check your configuration file and re-run Build Tool")
         # CHECK FOR GIT CONFIG
-        if Helpers.CONFIGURATION.get("repository") is not None and \
-                Helpers.CONFIGURATION.get("branch") is not None and \
-                Helpers.CONFIGURATION.get("username") is not None and \
-                Helpers.CONFIGURATION.get("token") is not None:
-            jobs.GitJob()
+        if cfg["repository"] is not None and \
+                cfg["branch"] is not None and \
+                cfg["username"] is not None and \
+                cfg["token"] is not None:
+            jobs.GitJob(cfg["name"])
         else:
             raise BuildToolError("Cannot create Git job. Check your configuration file and re-run Build Tool")
         # CHECK FOR {NS} CONFIG
-        if Helpers.CONFIGURATION.get("build").get("nativescript").get("enabled") is not None and \
-                Helpers.CONFIGURATION.get("build").get("nativescript").get("enabled") and \
-                Helpers.CONFIGURATION.get("build").get("nativescript").get("timer") is not None and \
-                Helpers.CONFIGURATION.get("build").get("nativescript").get("android").get("build") is not None and \
-                Helpers.CONFIGURATION.get("build").get("nativescript").get("android").get("test") is not None and \
-                Helpers.CONFIGURATION.get("build").get("nativescript").get("ios").get("build") is not None and \
-                Helpers.CONFIGURATION.get("build").get("nativescript").get("ios").get("test") is not None:
-            jobs.TnsJob()
+        if cfg["android"]["build"] is not None and \
+                cfg["android"]["test"] is not None and \
+                cfg["ios"]["build"] is not None and \
+                cfg["ios"]["test"] is not None and \
+                cfg["enabled"]:
+            jobs.TnsJob(cfg["name"])
+        else:
+            if cfg["enabled"] is not None and not cfg["enabled"]:
+                raise BuildToolError("{NS} job %s is disabled" % cfg["name"])
+            else:
+                raise BuildToolError("Cannot create {NS} job. Check your configuration file and re-run Build Tool")
+
+    @classmethod
+    def __check_timer(cls, cfg):
+        if cfg["timer"] is None or type(cfg["timer"]) != int:
+            raise BuildToolError("Timer for build %s is not a valid integer" % cfg["name"])
 
     def __init__(self):
         Initializer.__init__(self)

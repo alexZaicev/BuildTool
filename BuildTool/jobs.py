@@ -15,8 +15,8 @@ class GitJob(Job):
         cmd = CommandFactory.get_command(Helpers.CMD_GIT_PULL)
         cmd.execute()
 
-    def __init__(self):
-        Job.__init__(self, Helpers.JOB_GIT, __name__)
+    def __init__(self, name):
+        Job.__init__(self, Helpers.JOB_GIT, "GIT_%s".format(name))
 
 
 class TnsJob(Job):
@@ -41,5 +41,5 @@ class TnsJob(Job):
         cmd = CommandFactory.get_command(Helpers.CMD_TNS_TEST_IOS)
         cmd.execute()
 
-    def __init__(self):
-        Job.__init__(self, Helpers.JOB_TNS, __name__)
+    def __init__(self, name):
+        Job.__init__(self, Helpers.JOB_TNS, "TNS_%s".format(name))

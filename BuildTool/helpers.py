@@ -60,6 +60,9 @@ class Helpers:
     JOB_GIT = "JOB_0"
     JOB_TNS = "JOB_1"
 
+    MSG_INFO = "INFO"
+    MSG_ERR = "ERROR"
+
     @staticmethod
     def cmd_list(cmd):
         return cmd.split(" ")
@@ -125,23 +128,25 @@ class Helpers:
         """
 
         config = {
-            "repository": None,
-            "branch": "master",
-            "username": None,
-            "token": None,
-            "build": {
-                "nativescript": {
-                    "timer": 10,
-                    "android": {
-                        "build": False,
-                        "test": False
-                    },
-                    "ios": {
-                        "build": False,
-                        "test": False
+            "jobs": [
+                {
+                    "tns": {
+                        "repository": None,
+                        "branch": "master",
+                        "username": None,
+                        "token": None,
+                        "timer": 10,
+                        "android": {
+                            "build": False,
+                            "test": False
+                        },
+                        "ios": {
+                            "build": False,
+                            "test": False
+                        }
                     }
                 }
-            }
+            ]
         }
         with open(CONFIG_FILE, 'w') as f:
             json.dump(config, f, ensure_ascii=False)
@@ -158,18 +163,17 @@ class Helpers:
         with open(CONFIG_FILE, "r") as f:
             cfg = json.load(f)
         f.close()
-        if cfg.get("branch") is None:
-            cfg["branch"] = "master"
         return cfg
 
     @staticmethod
-    def print_with_stamp(msg):
+    def print_with_stamp(msg, status):
         """
             Method adds time stamp on the print output
 
             :param msg: Message to print
+            :param status: Message status
         """
-        print("%s  ---  %s" % (datetime.now().strftime("%Y-%m-%d  %H:%M:%S"), msg))
+        print("%s   ---   %s   ---   %s" % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), status, msg))
 
     @staticmethod
     def print_build_status(failed=True, msg=None):
@@ -182,13 +186,13 @@ class Helpers:
 
         if failed:
             if msg is not None:
-                Helpers.print_with_stamp(msg)
+                Helpers.print_with_stamp(msg, Helpers.MSG_ERR)
             print("\n\n%s  BUILD FAILED\n" % Helpers.RED)
 
             Helpers.send_notification(msg="Build Failed\nSee logs for more details")
         else:
             if msg is not None:
-                Helpers.print_with_stamp(msg)
+                Helpers.print_with_stamp(msg, Helpers.MSG_INFO)
             print("\n\n%s BUILD SUCCESS\n" % Helpers.GREEN)
 
             Helpers.send_notification(msg="Build Success\nSee logs for more details")
@@ -205,15 +209,15 @@ class Helpers:
         if shell is None:
             shell = isWin and not isUnix
         try:
-            out = subprocess.check_output(cmd, shell=shell)
-            return False, str(out, "UTF-8")
-            # sp = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            # while True:
-            #     line = sp.stdout.readline()
-            #     if not line:
-            #         break
-            #     print(str(line, "UTF-8"))
-            # return False, ""
+            # out = subprocess.check_output(cmd, shell=shell)
+            # return False, str(out, "UTF-8")
+            sp = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            while True:
+                line = sp.stdout.readline()
+                if not line:
+                    break
+                print(str(line, "UTF-8"))
+            return False, ""
         except subprocess.CalledProcessError as ex:
             return True, str(ex)
 
