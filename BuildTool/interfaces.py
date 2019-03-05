@@ -1,4 +1,6 @@
+import os
 from abc import ABC, abstractmethod
+from threading import Thread
 
 from helpers import Helpers
 
@@ -18,8 +20,20 @@ class Command(ABC):
         ABC.__init__(self)
 
     @abstractmethod
-    def execute(self):
+    def execute(self, cfg=None):
         raise BuildToolError("Command executor is not implemented")
+
+
+class Utils(object):
+    """
+        Built Tool utility singleton
+    """
+
+    def __new__(cls, *args, **kwargs):
+        raise BuildToolError("Utility classes cannot be instantiated")
+
+    def __init__(self, *args, **kwargs):
+        raise BuildToolError("Utility classes cannot be instantiated")
 
 
 class Rule(ABC):
@@ -27,14 +41,11 @@ class Rule(ABC):
         Build Tool rule object to store project specific build logic
     """
 
-    def __init__(self, name=None):
+    def __init__(self):
         ABC.__init__(self)
-        if name is None:
-            raise BuildToolError("Rule name cannot be None")
-        self.name = name
 
     @abstractmethod
-    def execute_rule(self):
+    def execute_rule(self, cfg, worker_id):
         raise BuildToolError("Rule logic has not been implemented")
 
 
@@ -51,31 +62,6 @@ class Initializer(ABC):
         raise BuildToolError("Initialize has not been implemented")
 
 
-class Utils(object):
-    """
-        Built Tool utility singleton
-    """
-
-    def __new__(cls, *args, **kwargs):
-        raise BuildToolError("Utility classes cannot be instantiated")
-
-    def __init__(self, *args, **kwargs):
-        raise BuildToolError("Utility classes cannot be instantiated")
-
-
-class RuleInitializer(Initializer):
-    """
-        Build tool custom built rule initializer class
-    """
-
-    def initialize(self):
-        from easypro_rules import EasyProRule
-        EasyProRule()
-
-    def __init__(self):
-        Initializer.__init__(self)
-
-
 class PreBuildRule(Rule):
     """
         Build Tool rule object to store project specific build logic that will be executed
@@ -83,14 +69,15 @@ class PreBuildRule(Rule):
     """
 
     def __init__(self, name=None):
-        Rule.__init__(self, name)
-        for br in Helpers.PRE_BUILD_RULES:
-            if br.name == name:
-                raise BuildToolError("Rule with name %s already exists" % name)
+        Rule.__init__(self)
+        for rule in Helpers.PRE_BUILD_RULES:
+            if rule == "PRE_B_{}".format(name):
+                raise BuildToolError("Pre-Build Rule with name %s already exists" % rule)
+        self.name = "PRE_B_{}".format(name)
         Helpers.PRE_BUILD_RULES.append(self)
 
     @abstractmethod
-    def execute_rule(self):
+    def execute_rule(self, cfg, worker_id):
         raise BuildToolError("Rule logic has not been implemented")
 
 
@@ -101,32 +88,55 @@ class PostBuildRule(Rule):
     """
 
     def __init__(self, name=None):
-        Rule.__init__(self, name)
-        for br in Helpers.POST_BUILD_RULES:
-            if br.name == name:
-                raise BuildToolError("Rule with name %s already exists" % name)
+        Rule.__init__(self)
+        for rule in Helpers.POST_BUILD_RULES:
+            if rule == "POST_B_{}".format(name):
+                raise BuildToolError("Post-Build Rule with name %s already exists" % rule)
+        self.name = "POST_B_{}".format(name)
         Helpers.POST_BUILD_RULES.append(self)
 
     @abstractmethod
-    def execute_rule(self):
+    def execute_rule(self, cfg, worker_id):
         raise BuildToolError("Rule logic has not been implemented")
 
 
 class Job(ABC):
 
-    def __init__(self, job_type, name):
+    def __init__(self, job_type, name, cfg=None):
         if job_type is None:
             raise BuildToolError("Job type cannot be None")
-        for job in Helpers.JOBS:
-            if job.name == name:
-                raise BuildToolError("Job with name %s already exists" % name)
         self.name = name
         self.type = job_type
-        Helpers.JOBS.append(self)
+        self.cfg = cfg
 
     @abstractmethod
-    def work(self):
+    def work(self, worker_id):
         raise BuildToolError("Job work not implemented")
+
+
+class JobContainer(object):
+
+    def __init__(self, jobs=(), cfg=None, rules=()):
+        object.__init__(self)
+        self.jobs = jobs
+        self.cfg = cfg
+        self.rules = rules
+
+    def execute_job_set(self, worker_id):
+        from helpers import WORKSPACE
+        os.chdir(WORKSPACE)
+        p = os.path.join(WORKSPACE, "{}_{}".format(Helpers.get_repo_name(self.cfg["name"]), worker_id))
+        if os.path.exists(p):
+            Helpers.remove_dir(p)
+        os.mkdir("{}_{}".format(Helpers.get_repo_name(self.cfg["name"]), worker_id))
+        os.chdir(p)
+
+        try:
+            for job in self.jobs:
+                job.work(worker_id)
+            Helpers.print_build_status(failed=False)
+        except BuildToolError as ex:
+            Helpers.print_build_status(msg=str(ex))
 
 
 class JobInitializer(Initializer):
@@ -135,19 +145,26 @@ class JobInitializer(Initializer):
     """
 
     def initialize(self):
+        import schedule
         job_types = {
             "tns": JobInitializer.__init_tns_job
         }
-        for job in Helpers.CONFIGURATION["jobs"]:
+        for cfg in Helpers.CONFIGURATION["jobs"]:
             # check for job type
             try:
-                job_types[job["type"]](job)
+                jc = JobContainer(jobs=job_types[cfg["type"]](cfg), cfg=cfg)
+                """
+                    SCHEDULER
+                """
+                schedule.every(cfg["timer"]).seconds.do(Helpers.JOBS.put, jc.execute_job_set)
             except AttributeError:
-                raise BuildToolError("Unknown job type %s specified in configuration file" % job["type"])
+                raise BuildToolError("Unknown job type %s specified in configuration file" % cfg["type"])
+        return schedule
 
     @classmethod
     def __init_tns_job(cls, cfg):
         import jobs
+        list_jobs = []
         if cfg["name"] is None or len(cfg["name"]) == 0:
             raise BuildToolError("Invalid build name. Check your configuration file and re-run Build Tool")
         # CHECK FOR GIT CONFIG
@@ -155,7 +172,7 @@ class JobInitializer(Initializer):
                 cfg["branch"] is not None and \
                 cfg["username"] is not None and \
                 cfg["token"] is not None:
-            jobs.GitJob(cfg["name"])
+            list_jobs.append(jobs.GitJob(cfg["name"], cfg=cfg))
         else:
             raise BuildToolError("Cannot create Git job. Check your configuration file and re-run Build Tool")
         # CHECK FOR {NS} CONFIG
@@ -164,12 +181,14 @@ class JobInitializer(Initializer):
                 cfg["ios"]["build"] is not None and \
                 cfg["ios"]["test"] is not None and \
                 cfg["enabled"]:
-            jobs.TnsJob(cfg["name"])
+            JobInitializer.__check_timer(cfg)
+            list_jobs.append(jobs.TnsJob(cfg["name"], cfg=cfg))
         else:
             if cfg["enabled"] is not None and not cfg["enabled"]:
                 raise BuildToolError("{NS} job %s is disabled" % cfg["name"])
             else:
                 raise BuildToolError("Cannot create {NS} job. Check your configuration file and re-run Build Tool")
+        return list_jobs
 
     @classmethod
     def __check_timer(cls, cfg):
@@ -178,3 +197,16 @@ class JobInitializer(Initializer):
 
     def __init__(self):
         Initializer.__init__(self)
+
+
+class WorkerThread(Thread):
+
+    def __init__(self, worker_id):
+        Thread.__init__(self)
+        self.worker_id = worker_id
+
+    def run(self):
+        while True:
+            executor = Helpers.JOBS.get()
+            executor(self.worker_id)
+            Helpers.JOBS.task_done()

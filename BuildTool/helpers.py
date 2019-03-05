@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime
+import queue
 
 # DIRECTORIES
 isWin = False
@@ -33,7 +34,7 @@ class Helpers:
     PRE_BUILD_RULES = list()
     POST_BUILD_RULES = list()
     CONFIGURATION = None
-    JOBS = list()
+    JOBS = queue.Queue()
 
     # TERMINAL COLORS
     RED = "\033[1;31m"
@@ -93,20 +94,20 @@ class Helpers:
         return sa[len(sa) - 1].split(".")[0]
 
     @staticmethod
-    def execute_pre_build_rules():
+    def execute_pre_build_rules(worker_id):
         """
             Pre-Build rules executor
         """
         for br in Helpers.PRE_BUILD_RULES:
-            br.execute_rule()
+            br.execute_rule(worker_id)
 
     @staticmethod
-    def execute_post_build_rules():
+    def execute_post_build_rules(worker_id):
         """
             Pre-Build rules executor
         """
         for br in Helpers.POST_BUILD_RULES:
-            br.execute_rule()
+            br.execute_rule(worker_id)
 
     @staticmethod
     def remove_dir(name):
@@ -130,20 +131,21 @@ class Helpers:
         config = {
             "jobs": [
                 {
-                    "tns": {
-                        "repository": None,
-                        "branch": "master",
-                        "username": None,
-                        "token": None,
-                        "timer": 10,
-                        "android": {
-                            "build": False,
-                            "test": False
-                        },
-                        "ios": {
-                            "build": False,
-                            "test": False
-                        }
+                    "type": None,
+                    "name": None,
+                    "repository": None,
+                    "branch": "master",
+                    "username": None,
+                    "token": None,
+                    "timer": 10,
+                    "enabled": False,
+                    "android": {
+                        "build": False,
+                        "test": False
+                    },
+                    "ios": {
+                        "build": False,
+                        "test": False
                     }
                 }
             ]
@@ -189,13 +191,13 @@ class Helpers:
                 Helpers.print_with_stamp(msg, Helpers.MSG_ERR)
             print("\n\n%s  BUILD FAILED\n" % Helpers.RED)
 
-            Helpers.send_notification(msg="Build Failed\nSee logs for more details")
+            # Helpers.send_notification(msg="Build Failed\nSee logs for more details")
         else:
             if msg is not None:
                 Helpers.print_with_stamp(msg, Helpers.MSG_INFO)
             print("\n\n%s BUILD SUCCESS\n" % Helpers.GREEN)
 
-            Helpers.send_notification(msg="Build Success\nSee logs for more details")
+            # Helpers.send_notification(msg="Build Success\nSee logs for more details")
         print(Helpers.RESET)
 
     @staticmethod
@@ -217,17 +219,11 @@ class Helpers:
                 if not line:
                     break
                 print(str(line, "UTF-8"))
+            if sp.returncode != 0 and sp.returncode is not None:
+                return True, "Build failed with status code {}".format(sp.returncode)
             return False, ""
         except subprocess.CalledProcessError as ex:
             return True, str(ex)
-
-    @staticmethod
-    def trigger_jobs():
-        """
-            Method to execute active jobs
-        """
-        for job in Helpers.JOBS:
-            job.work()
 
     @staticmethod
     def check_dirs():
@@ -246,16 +242,23 @@ class Helpers:
             Helpers.create_config()
             raise interfaces.BuildToolError("Build Tool not configured")
 
-    @staticmethod
-    def send_notification(msg):
-        title = "Build Tool Notification"
-        if isWin:
-            from win10toast import ToastNotifier
-            tn = ToastNotifier()
-            tn.show_toast(title=title, msg=msg)
-        elif isUnix:
-            import pync
-            if "linux" in sys.platform.lower():
-                Helpers.perform_command(cmd=("notify-send", title, msg), shell=False)
-            else:
-                pync.notify(msg, title=title)
+    # @staticmethod
+    # def send_notification(msg):
+    #     import plyer
+    #     title = "Build Tool Notification"
+    #     if isWin:
+    #         # from win10toast import ToastNotifier
+    #         # tn = ToastNotifier()
+    #         # tn.show_toast(title=title, msg=msg)
+    #         plyer.notification.notify(
+    #             title=title,
+    #             message=msg,
+    #             timeout=5,
+    #             app_name="Build Tool"
+    #         )
+    #     elif isUnix:
+    #         import pync
+    #         if "linux" in sys.platform.lower():
+    #             Helpers.perform_command(cmd=("notify-send", title, msg), shell=False)
+    #         else:
+    #             pync.notify(msg, title=title)

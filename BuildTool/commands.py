@@ -42,22 +42,21 @@ class GitCloneCommand(Command):
             git clone {url}
     """
 
-    def execute(self):
+    def execute(self, cfg=None):
         Helpers.print_with_stamp("STARTING GIT CLONE", Helpers.MSG_INFO)
-        git_url = Helpers.parse_repo(Helpers.CONFIGURATION.get("repository"), Helpers.CONFIGURATION.get("username"),
-                                     Helpers.CONFIGURATION.get("token"))
+        git_url = Helpers.parse_repo(cfg["repository"], cfg["username"], cfg["token"])
         print(git_url)
         failed, out = Helpers.perform_command(cmd=Helpers.cmd_list("git clone %s" % git_url))
         if failed:
             raise BuildToolError(
-                "Failed to clone repository: %s." % Helpers.CONFIGURATION.get("repository"))
+                "Failed to clone repository: %s." % cfg["repository"])
         else:
             Helpers.print_with_stamp(out, Helpers.MSG_INFO)
         try:
-            os.chdir(WORKSPACE + Helpers.get_repo_name(Helpers.CONFIGURATION.get("repository")))
+            os.chdir(WORKSPACE + Helpers.get_repo_name(cfg["repository"]))
         except FileNotFoundError:
             raise BuildToolError(
-                "Failed to clone repository: %s." % Helpers.CONFIGURATION.get("repository"))
+                "Failed to clone repository: %s." % cfg["repository"])
 
     def __init__(self):
         Command.__init__(self)
@@ -69,7 +68,7 @@ class GitFetchCommand(Command):
             git fetch
     """
 
-    def execute(self):
+    def execute(self, cfg=None):
         Helpers.print_with_stamp("STARTING GIT FETCH", Helpers.MSG_INFO)
         failed, out = Helpers.perform_command(cmd=Helpers.cmd_list("git fetch"))
         if failed:
@@ -87,13 +86,13 @@ class GitCheckoutCommand(Command):
             git checkout {branch}
     """
 
-    def execute(self):
+    def execute(self, cfg=None):
         Helpers.print_with_stamp("STARTING GIT CHECKOUT", Helpers.MSG_INFO)
         failed, out = Helpers.perform_command(
-            cmd=Helpers.cmd_list("git checkout %s" % Helpers.CONFIGURATION.get("branch")))
+            cmd=Helpers.cmd_list("git checkout %s" % cfg["branch"]))
         if failed:
             raise BuildToolError(
-                "Failed to checkout to branch [%s]." % Helpers.CONFIGURATION.get("branch"))
+                "Failed to checkout to branch [%s]." % cfg["branch"])
         else:
             Helpers.print_with_stamp(out, Helpers.MSG_INFO)
 
@@ -107,13 +106,13 @@ class GitPullCommand(Command):
             git pull origin {branch}
     """
 
-    def execute(self):
+    def execute(self, cfg=None):
         Helpers.print_with_stamp("STARTING GIT PULL", Helpers.MSG_INFO)
         failed, out = Helpers.perform_command(
-            cmd=Helpers.cmd_list("git pull origin %s" % Helpers.CONFIGURATION.get("branch")))
+            cmd=Helpers.cmd_list("git pull origin %s" % cfg["branch"]))
         if failed:
             raise BuildToolError(
-                "Failed to pull from branch [%s]." % Helpers.CONFIGURATION.get("branch"))
+                "Failed to pull from branch [%s]." % cfg["branch"])
         else:
             Helpers.print_with_stamp(out, Helpers.MSG_INFO)
 
@@ -127,7 +126,7 @@ class TnsVersionCommand(Command):
             tns --version
     """
 
-    def execute(self):
+    def execute(self, cfg=None):
         # CHECK IF {NS} IS PRESENT BY CHECKING VERSION
         Helpers.print_with_stamp("STARTING {NS} VERSION CHECK", Helpers.MSG_INFO)
         failed, out = Helpers.perform_command(cmd="tns --version", shell=True)
@@ -146,7 +145,7 @@ class TnsInstallCommand(Command):
             tns install
     """
 
-    def execute(self):
+    def execute(self, cfg=None):
         # {NS} INSTALL DEPENDENCIES
         Helpers.print_with_stamp("STARTING {NS} INSTALL", Helpers.MSG_INFO)
         failed, out = Helpers.perform_command(cmd="tns install", shell=True)
@@ -165,9 +164,9 @@ class TnsBuildAndroidCommand(Command):
             tns build android
     """
 
-    def execute(self):
+    def execute(self, cfg=None):
         # ANDROID BUILD
-        if Helpers.CONFIGURATION.get("build").get("nativescript").get("android").get("build"):
+        if cfg["android"]["build"]:
             Helpers.print_with_stamp("STARTING BUILD ANDROID", Helpers.MSG_INFO)
             failed, out = Helpers.perform_command(cmd=("tns build %s" % "android"), shell=True)
             if failed:
@@ -188,9 +187,9 @@ class TnsBuildIosCommand(Command):
             tns build ios
     """
 
-    def execute(self):
+    def execute(self, cfg=None):
         # IOS BUILD
-        if Helpers.CONFIGURATION.get("build").get("nativescript").get("ios").get("build"):
+        if cfg["ios"]["build"]:
             Helpers.print_with_stamp("STARTING BUILD IOS", Helpers.MSG_INFO)
             failed, out = Helpers.perform_command(cmd=("tns build %s" % "ios"), shell=True)
             if failed:
@@ -211,9 +210,9 @@ class TnsTestAndroidCommand(Command):
             tns test android
     """
 
-    def execute(self):
+    def execute(self, cfg=None):
         # ANDROID TEST
-        if Helpers.CONFIGURATION.get("build").get("nativescript").get("android").get("test"):
+        if cfg["android"]["test"]:
             Helpers.print_with_stamp("STARTING TEST ANDROID", Helpers.MSG_INFO)
             failed, out = Helpers.perform_command(cmd=("tns test %s" % "android"), shell=True)
             if failed:
@@ -234,9 +233,9 @@ class TnsTestIosCommand(Command):
             tns test iOS
     """
 
-    def execute(self):
+    def execute(self, cfg=None):
         # ANDROID TEST
-        if Helpers.CONFIGURATION.get("build").get("nativescript").get("ios").get("test"):
+        if cfg["ios"]["test"]:
             Helpers.print_with_stamp("STARTING TEST IOS", Helpers.MSG_INFO)
             failed, out = Helpers.perform_command(cmd=("tns test %s" % "ios"), shell=True)
             if failed:

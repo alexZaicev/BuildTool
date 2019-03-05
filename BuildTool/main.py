@@ -1,39 +1,37 @@
-import os
+import threading
 import time
 
-import schedule
-
 from helpers import Helpers
-from helpers import WORKSPACE
-from interfaces import BuildToolError, JobInitializer
+from interfaces import BuildToolError, JobInitializer, WorkerThread
 
 
 def main():
-    Helpers.send_notification(msg="Initializing Build Tool Environment")
+    # Helpers.send_notification(msg="Initializing Build Tool Environment")
+    Helpers.print_with_stamp(msg="Initializing Build Tool Environment", status=Helpers.MSG_INFO)
     try:
         Helpers.check_dirs()
         Helpers.CONFIGURATION = Helpers.read_config()
+
         job_init = JobInitializer()
-        job_init.initialize()
-        # configure scheduler
-        schedule.every(Helpers.CONFIGURATION.get("build").get("nativescript").get("timer")).minutes.do(job)
-        schedule.run_all(5)
+        scheduler = job_init.initialize()
+
+        worker_1 = WorkerThread(1)
+        worker_2 = WorkerThread(2)
+        worker_3 = WorkerThread(3)
+
+        worker_1.start()
+        worker_2.start()
+        worker_3.start()
+
         while True:
-            schedule.run_pending()
-            time.sleep(10)
+            scheduler.run_pending()
+            time.sleep(1)
+
     except BuildToolError as ex:
         Helpers.print_build_status(msg=str(ex))
-
-
-def job():
-    os.chdir(WORKSPACE)
-    if os.path.exists(WORKSPACE + Helpers.get_repo_name(Helpers.CONFIGURATION.get("repository"))):
-        Helpers.remove_dir(WORKSPACE + Helpers.get_repo_name(Helpers.CONFIGURATION.get("repository")))
-    try:
-        Helpers.trigger_jobs()
-        Helpers.print_build_status(failed=False)
-    except BuildToolError as ex:
-        Helpers.print_build_status(msg=str(ex))
+    except AttributeError:
+        Helpers.print_build_status(
+            msg="Invalid configuration file format. Check the format of the file and re-run the tool")
 
 
 if __name__ == "__main__":
