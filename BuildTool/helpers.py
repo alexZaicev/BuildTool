@@ -1,3 +1,10 @@
+"""
+    Product Name: BuildTool
+    Author: Aleksej Zaicev
+
+    Copyright 2019
+"""
+
 import json
 import os
 import subprocess

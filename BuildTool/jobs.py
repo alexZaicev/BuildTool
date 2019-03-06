@@ -1,3 +1,10 @@
+"""
+    Product Name: BuildTool
+    Author: Aleksej Zaicev
+
+    Copyright 2019
+"""
+
 from commands import CommandFactory
 from helpers import Helpers
 from interfaces import Job

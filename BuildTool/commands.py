@@ -1,3 +1,10 @@
+"""
+    Product Name: BuildTool
+    Author: Aleksej Zaicev
+
+    Copyright 2019
+"""
+
 import os
 
 from helpers import Helpers, WORKSPACE

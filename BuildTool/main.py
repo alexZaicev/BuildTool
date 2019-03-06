@@ -1,3 +1,10 @@
+"""
+    Product Name: BuildTool
+    Author: Aleksej Zaicev
+
+    Copyright 2019
+"""
+
 import time
 
 from helpers import Helpers
@@ -5,12 +12,18 @@ from interfaces import BuildToolError, JobInitializer, WorkerThread
 
 
 def main():
-    # Helpers.send_notification(msg="Initializing Build Tool Environment")
+    """
+        Main application start up method
+    """
+
     Helpers.print_with_stamp(msg="Initializing Build Tool Environment", status=Helpers.MSG_INFO)
     try:
+        """ Prepare working directories and load configuration file
+        """
         Helpers.check_dirs()
         Helpers.CONFIGURATION = Helpers.read_config()
-
+        """ Initialize jobs and workers
+        """
         job_init = JobInitializer()
         scheduler = job_init.initialize()
 
@@ -23,8 +36,10 @@ def main():
         worker_3.start()
 
         while True:
+            """ Build tool loop
+            """
             scheduler.run_pending()
-            time.sleep(1)
+            time.sleep(10)
 
     except BuildToolError as ex:
         Helpers.print_build_status(msg=str(ex))
