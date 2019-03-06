@@ -20,7 +20,7 @@ class Command(ABC):
         ABC.__init__(self)
 
     @abstractmethod
-    def execute(self, cfg=None):
+    def execute(self, cfg=None, worker_id=0):
         raise BuildToolError("Command executor is not implemented")
 
 
@@ -124,13 +124,10 @@ class JobContainer(object):
 
     def execute_job_set(self, worker_id):
         from helpers import WORKSPACE
-        os.chdir(WORKSPACE)
         p = os.path.join(WORKSPACE, "{}_{}".format(Helpers.get_repo_name(self.cfg["name"]), worker_id))
         if os.path.exists(p):
             Helpers.remove_dir(p)
-        os.mkdir("{}_{}".format(Helpers.get_repo_name(self.cfg["name"]), worker_id))
-        os.chdir(p)
-
+        os.mkdir(p)
         try:
             for job in self.jobs:
                 job.work(worker_id)
@@ -146,9 +143,12 @@ class JobInitializer(Initializer):
 
     def initialize(self):
         import schedule
+        from rules import init
+        init()
         job_types = {
             "tns": JobInitializer.__init_tns_job
         }
+
         for cfg in Helpers.CONFIGURATION["jobs"]:
             # check for job type
             try:
@@ -156,7 +156,7 @@ class JobInitializer(Initializer):
                 """
                     SCHEDULER
                 """
-                schedule.every(cfg["timer"]).seconds.do(Helpers.JOBS.put, jc.execute_job_set)
+                schedule.every(cfg["timer"]).minutes.do(Helpers.JOBS.put, jc.execute_job_set)
             except AttributeError:
                 raise BuildToolError("Unknown job type %s specified in configuration file" % cfg["type"])
         return schedule
@@ -169,9 +169,10 @@ class JobInitializer(Initializer):
             raise BuildToolError("Invalid build name. Check your configuration file and re-run Build Tool")
         # CHECK FOR GIT CONFIG
         if cfg["repository"] is not None and \
-                cfg["branch"] is not None and \
                 cfg["username"] is not None and \
                 cfg["token"] is not None:
+            if cfg["branch"] is None or type(cfg["branch"]) != str or len(cfg["branch"]) == 0:
+                cfg["branch"] = "master"
             list_jobs.append(jobs.GitJob(cfg["name"], cfg=cfg))
         else:
             raise BuildToolError("Cannot create Git job. Check your configuration file and re-run Build Tool")

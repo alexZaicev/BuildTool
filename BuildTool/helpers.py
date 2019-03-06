@@ -94,20 +94,20 @@ class Helpers:
         return sa[len(sa) - 1].split(".")[0]
 
     @staticmethod
-    def execute_pre_build_rules(worker_id):
+    def execute_pre_build_rules(cfg, worker_id):
         """
             Pre-Build rules executor
         """
         for br in Helpers.PRE_BUILD_RULES:
-            br.execute_rule(worker_id)
+            br.execute_rule(cfg, worker_id)
 
     @staticmethod
-    def execute_post_build_rules(worker_id):
+    def execute_post_build_rules(cfg, worker_id):
         """
             Pre-Build rules executor
         """
         for br in Helpers.POST_BUILD_RULES:
-            br.execute_rule(worker_id)
+            br.execute_rule(cfg, worker_id)
 
     @staticmethod
     def remove_dir(name):
@@ -116,11 +116,18 @@ class Helpers:
 
             :param name: Directory path
         """
-
-        if isWin:
-            os.system("rmdir /Q /S %s" % name)
-        elif isUnix:
-            os.system("rm -rf %s" % name)
+        try:
+            if isWin:
+                out = str(subprocess.check_output(["rmdir", "/Q", "/S", name], shell=True), "UTF-8")
+                if len(out) > 0:
+                    Helpers.print_with_stamp(out, Helpers.MSG_INFO)
+            elif isUnix:
+                out = str(subprocess.check_output(["rm", "-rf", name]), "UTF-8")
+                if len(out) > 0:
+                    Helpers.print_with_stamp(out, Helpers.MSG_INFO)
+        except subprocess.CalledProcessError:
+            from interfaces import BuildToolError
+            raise BuildToolError("Failed to remove directory %s" % name)
 
     @staticmethod
     def create_config():
@@ -214,12 +221,20 @@ class Helpers:
             # out = subprocess.check_output(cmd, shell=shell)
             # return False, str(out, "UTF-8")
             sp = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            has_errors = False
             while True:
-                line = sp.stdout.readline()
+                if sp.stderr is not None:
+                    line = sp.stderr.readline()
+                    if line:
+                        has_errors = True
+                line = str(sp.stdout.readline(), "UTF-8")
                 if not line:
                     break
-                print(str(line, "UTF-8"))
-            if sp.returncode != 0 and sp.returncode is not None:
+                elif "BUILD" in line and "FAILED" in line:
+                    return True, "Build failed with status code {}".format(sp.returncode)
+                print(line)
+
+            if sp.returncode != 0 and sp.returncode is not None and has_errors:
                 return True, "Build failed with status code {}".format(sp.returncode)
             return False, ""
         except subprocess.CalledProcessError as ex:
