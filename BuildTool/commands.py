@@ -283,3 +283,39 @@ class TnsTestIosCommand(Command):
 
     def __init__(self):
         Command.__init__(self)
+
+
+class TnsBuildAndroidBundle(Command):
+
+    def execute(self, cfg=None, worker_id=0, logger=None):
+        pass
+
+    def __init__(self):
+        Command.__init__(self)
+
+
+class TnsBuildIosBundle(Command):
+
+    def execute(self, cfg=None, worker_id=0, logger=None):
+        pass
+
+    def __init__(self):
+        Command.__init__(self)
+
+
+class TnsBuildBundleUglifyAndroid(Command):
+
+    def execute(self, cfg=None, worker_id=0, logger=None):
+        pass
+
+    def __init__(self):
+        Command.__init__(self)
+
+
+class TnsBuildBundleUglifyIos(Command):
+
+    def execute(self, cfg=None, worker_id=0, logger=None):
+        pass
+
+    def __init__(self):
+        Command.__init__(self)
