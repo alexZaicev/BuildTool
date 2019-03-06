@@ -73,6 +73,14 @@ class Helpers:
     MSG_INFO = "INFO"
     MSG_ERR = "ERROR"
 
+    def __new__(cls, *args, **kwargs):
+        from interfaces import BuildToolError
+        raise BuildToolError("Cannot instantiate static classes")
+
+    def __init__(self):
+        from interfaces import BuildToolError
+        raise BuildToolError("Cannot instantiate static classes")
+
     @staticmethod
     def cmd_list(cmd):
         return cmd.split(" ")
@@ -87,6 +95,7 @@ class Helpers:
             :param token: GitHub Access Token
             :return: parsed Git HTTPS url
         """
+
         return "https://%s:%s@%s" % (
             user, token, url[8:]
         )
@@ -99,6 +108,7 @@ class Helpers:
         :param url: Repository url
         :return: Repository name
         """
+
         sa = url.split("/")
         return sa[len(sa) - 1].split(".")[0]
 
@@ -107,6 +117,7 @@ class Helpers:
         """
             Pre-Build rules executor
         """
+
         logger.printer("Executing pre-build rules", Helpers.MSG_INFO)
         for br in Helpers.PRE_BUILD_RULES:
             br.execute_rule(cfg, worker_id, logger)
@@ -127,6 +138,7 @@ class Helpers:
 
             :param name: Directory path
         """
+
         try:
             if isWin:
                 out = str(subprocess.check_output(["rmdir", "/Q", "/S", name], shell=True), "UTF-8")
@@ -142,6 +154,12 @@ class Helpers:
 
     @staticmethod
     def remove_file(name):
+        """
+            File removing function
+
+            :param name: Directory path
+        """
+
         try:
             if isWin:
                 out = str(subprocess.check_output(["del", "/f", name], shell=True), "UTF-8")
@@ -278,24 +296,3 @@ class Helpers:
 
         if not os.path.exists(LOGS):
             os.mkdir(LOGS)
-
-    # @staticmethod
-    # def send_notification(msg):
-    #     import plyer
-    #     title = "Build Tool Notification"
-    #     if isWin:
-    #         # from win10toast import ToastNotifier
-    #         # tn = ToastNotifier()
-    #         # tn.show_toast(title=title, msg=msg)
-    #         plyer.notification.notify(
-    #             title=title,
-    #             message=msg,
-    #             timeout=5,
-    #             app_name="Build Tool"
-    #         )
-    #     elif isUnix:
-    #         import pync
-    #         if "linux" in sys.platform.lower():
-    #             Helpers.perform_command(cmd=("notify-send", title, msg), shell=False)
-    #         else:
-    #             pync.notify(msg, title=title)

@@ -11,8 +11,17 @@ from interfaces import Job
 
 
 class GitJob(Job):
+    """
+        Git command executing job. Clones the repository and pulls the latest changes from specified branch
+    """
 
     def work(self, worker_id, logger):
+        """
+            Job executor containing sequence of command needed to be performed
+
+            :param worker_id: Working thread ID
+            :param logger: Working thread logger
+        """
         cmd = CommandFactory.get_command(Helpers.CMD_GIT_CLONE)
         cmd.execute(self.cfg, worker_id, logger)
         cmd = CommandFactory.get_command(Helpers.CMD_GIT_FETCH)
@@ -27,6 +36,10 @@ class GitJob(Job):
 
 
 class TnsJob(Job):
+    """
+        Telerik Nativescript {NS} command executing job. Job installs project dependencies specified in `package.json`
+        file, build and test project for both Android and iOS.
+    """
 
     def work(self, worker_id, logger):
         cmd = CommandFactory.get_command(Helpers.CMD_TNS_VERSION)

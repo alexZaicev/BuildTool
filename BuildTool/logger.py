@@ -13,6 +13,9 @@ from datetime import datetime
 
 
 class Logger(object):
+    """
+        Logger for worker threads to keep track of each job build
+    """
 
     def __init__(self, name=None):
         object.__init__(self)
@@ -21,18 +24,34 @@ class Logger(object):
             Helpers.print_with_stamp(msg=("Log with name %s already exists. Overriding existing file" % name),
                                      status=Helpers.MSG_ERR)
             Helpers.remove_file(path)
-        self.clean_logs()
+        Logger.clean_logs()
         self.file_out = open(file=path, mode="w+", )
 
     def printer(self, msg, msg_type):
+        """
+            Functions write into logger file and outputs into the terminal
+
+            :param msg: Message to print
+            :param msg_type:  Message type
+        """
+
         self.file_out.write(
             "%s   ---   %s   ---   %s\r" % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), msg_type, msg))
         Helpers.print_with_stamp(msg, msg_type)
 
     def kill(self):
+        """
+            Function to kill logger instace
+        """
+
         self.file_out.close()
 
-    def clean_logs(self):
+    @classmethod
+    def clean_logs(cls):
+        """
+            Function to clean logger files
+        """
+
         logs = os.listdir(LOGS)
         wl_1, wl_2, wl_3 = 0, 0, 0
         for log in logs:
@@ -46,13 +65,20 @@ class Logger(object):
                 elif wid == 3:
                     wl_3 += 1
         if wl_1 >= 10:
-            self.__remove_worker_logs(logs, 1)
+            Logger.__remove_worker_logs(logs, 1)
         if wl_2 >= 10:
-            self.__remove_worker_logs(logs, 2)
+            Logger.__remove_worker_logs(logs, 2)
         if wl_3 >= 10:
-            self.__remove_worker_logs(logs, 3)
+            Logger.__remove_worker_logs(logs, 3)
 
-    def __remove_worker_logs(self, logs, wid):
+    @classmethod
+    def __remove_worker_logs(cls, logs, wid):
+        """
+            Function removes older files
+
+            :param logs: List of log files
+            :param wid:  Worker thread ID
+        """
         log_dict = dict()
         for log in logs:
             sa = log.split("_")

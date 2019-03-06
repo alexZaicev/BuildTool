@@ -108,6 +108,9 @@ class PostBuildRule(Rule):
 
 
 class Job(ABC):
+    """
+        Build Tool job object to contain execution sequence for a specific job
+    """
 
     def __init__(self, job_type, name, cfg=None):
         if job_type is None:
@@ -122,6 +125,10 @@ class Job(ABC):
 
 
 class JobContainer(object):
+    """
+        Build Tool job container object, stores jobs to execute for a specific build and
+        and executes the build job set
+    """
 
     def __init__(self, jobs=(), cfg=None, rules=()):
         object.__init__(self)
@@ -178,6 +185,11 @@ class JobInitializer(Initializer):
 
     @classmethod
     def __init_tns_job(cls, cfg):
+        """
+            Telerik Nativescript {NS} job initialization function
+
+            :param cfg: Build configuration
+        """
         import jobs
         list_jobs = []
         if cfg["name"] is None or len(cfg["name"]) == 0:
@@ -216,6 +228,9 @@ class JobInitializer(Initializer):
 
 
 class WorkerThread(Thread):
+    """
+        Build Tool worker thread object, representing a single build executor
+    """
 
     def __init__(self, worker_id):
         Thread.__init__(self)

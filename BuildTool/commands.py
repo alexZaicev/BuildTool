@@ -202,18 +202,26 @@ class TnsBuildIosCommand(Command):
 
     def execute(self, cfg=None, worker_id=0, logger=None):
         # IOS BUILD
-        if cfg["ios"]["build"]:
-            logger.printer("STARTING BUILD IOS", Helpers.MSG_INFO)
-            path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
-            cmd = "tns build ios --path {}".format(path)
-            failed, out = Helpers.perform_command(cmd=cmd, shell=True)
-            if failed:
-                raise BuildToolError("{NS} failed to build project for iOS")
+        from helpers import isWin, isUnix
+        if isUnix and not isWin:
+            import sys
+            if "darwin" in sys.platform.lower():
+                if cfg["ios"]["build"]:
+                    logger.printer("STARTING BUILD IOS", Helpers.MSG_INFO)
+                    path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
+                    cmd = "tns build ios --path {}".format(path)
+                    failed, out = Helpers.perform_command(cmd=cmd, shell=True)
+                    if failed:
+                        raise BuildToolError("{NS} failed to build project for iOS")
+                    else:
+                        logger.printer(out, Helpers.MSG_INFO)
+                else:
+                    logger.printer("iOS build is disabled in configuration file. Enable it and re-run the build",
+                                   Helpers.MSG_INFO)
             else:
-                logger.printer(out, Helpers.MSG_INFO)
+                logger.printer("iOS build cannot be performed on Linux platform", Helpers.MSG_ERR)
         else:
-            logger.printer("iOS build is disabled in configuration file. Enable it and re-run the build",
-                           Helpers.MSG_INFO)
+            logger.printer("iOS build cannot be performed on Windows platform", Helpers.MSG_ERR)
 
     def __init__(self):
         Command.__init__(self)
@@ -251,19 +259,27 @@ class TnsTestIosCommand(Command):
     """
 
     def execute(self, cfg=None, worker_id=0, logger=None):
-        # ANDROID TEST
-        if cfg["ios"]["test"]:
-            logger.printer("STARTING TEST IOS", Helpers.MSG_INFO)
-            path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
-            cmd = "tns test ios --path {}".format(path)
-            failed, out = Helpers.perform_command(cmd=cmd, shell=True)
-            if failed:
-                raise BuildToolError("{NS} failed to test project for iOS")
+        # IOS TEST
+        from helpers import isWin, isUnix
+        if isUnix and not isWin:
+            import sys
+            if "darwin" in sys.platform.lower():
+                if cfg["ios"]["test"]:
+                    logger.printer("STARTING TEST IOS", Helpers.MSG_INFO)
+                    path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
+                    cmd = "tns test ios --path {}".format(path)
+                    failed, out = Helpers.perform_command(cmd=cmd, shell=True)
+                    if failed:
+                        raise BuildToolError("{NS} failed to test project for iOS")
+                    else:
+                        logger.printer(out, Helpers.MSG_INFO)
+                else:
+                    logger.printer("iOS test is disabled in configuration file. Enable it and re-run the build",
+                                   Helpers.MSG_INFO)
             else:
-                logger.printer(out, Helpers.MSG_INFO)
+                logger.printer("iOS build cannot be performed on Windows platform", Helpers.MSG_ERR)
         else:
-            logger.printer("iOS test is disabled in configuration file. Enable it and re-run the build",
-                           Helpers.MSG_INFO)
+            logger.printer("iOS test cannot be performed on Windows platform", Helpers.MSG_ERR)
 
     def __init__(self):
         Command.__init__(self)
