@@ -17,10 +17,12 @@ elif "linux" in sys.platform.lower() or "darwin" in sys.platform.lower():
 if isWin:
     ROOT = "C:\\Users\\%s\\AppData\\Local\\BuildTool\\" % os.environ.get('USERNAME')
     WORKSPACE = ROOT + "Workspace\\"
+    LOGS = ROOT + "Logs\\"
     CONFIG_FILE = ROOT + "config.json"
 elif isUnix:
     ROOT = "/usr/local/bin/BuildTool/"
     WORKSPACE = ROOT + "Workspace/"
+    LOGS = ROOT + "Logs/"
     CONFIG_FILE = ROOT + "config.json"
 
 PROJECT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__))[:-4], "resources")
@@ -94,20 +96,22 @@ class Helpers:
         return sa[len(sa) - 1].split(".")[0]
 
     @staticmethod
-    def execute_pre_build_rules(cfg, worker_id):
+    def execute_pre_build_rules(cfg, worker_id, logger):
         """
             Pre-Build rules executor
         """
+        logger.printer("Executing pre-build rules", Helpers.MSG_INFO)
         for br in Helpers.PRE_BUILD_RULES:
-            br.execute_rule(cfg, worker_id)
+            br.execute_rule(cfg, worker_id, logger)
 
     @staticmethod
-    def execute_post_build_rules(cfg, worker_id):
+    def execute_post_build_rules(cfg, worker_id, logger):
         """
             Pre-Build rules executor
         """
+        logger.printer("Executing post-build rules", Helpers.MSG_INFO)
         for br in Helpers.POST_BUILD_RULES:
-            br.execute_rule(cfg, worker_id)
+            br.execute_rule(cfg, worker_id, logger)
 
     @staticmethod
     def remove_dir(name):
@@ -128,6 +132,21 @@ class Helpers:
         except subprocess.CalledProcessError:
             from interfaces import BuildToolError
             raise BuildToolError("Failed to remove directory %s" % name)
+
+    @staticmethod
+    def remove_file(name):
+        try:
+            if isWin:
+                out = str(subprocess.check_output(["del", "/f", name], shell=True), "UTF-8")
+                if len(out) > 0:
+                    Helpers.print_with_stamp(out, Helpers.MSG_INFO)
+            elif isUnix:
+                out = str(subprocess.check_output(["rm", "-f", name]), "UTF-8")
+                if len(out) > 0:
+                    Helpers.print_with_stamp(out, Helpers.MSG_INFO)
+        except subprocess.CalledProcessError:
+            from interfaces import BuildToolError
+            raise BuildToolError("Failed to remove file %s" % name)
 
     @staticmethod
     def create_config():
@@ -196,15 +215,11 @@ class Helpers:
         if failed:
             if msg is not None:
                 Helpers.print_with_stamp(msg, Helpers.MSG_ERR)
-            print("\n\n%s  BUILD FAILED\n" % Helpers.RED)
-
-            # Helpers.send_notification(msg="Build Failed\nSee logs for more details")
+            Helpers.print_with_stamp("\n\n%s  BUILD FAILED\n" % Helpers.RED, Helpers.MSG_ERR)
         else:
             if msg is not None:
                 Helpers.print_with_stamp(msg, Helpers.MSG_INFO)
-            print("\n\n%s BUILD SUCCESS\n" % Helpers.GREEN)
-
-            # Helpers.send_notification(msg="Build Success\nSee logs for more details")
+            Helpers.print_with_stamp("\n\n%s BUILD SUCCESS\n" % Helpers.GREEN, Helpers.MSG_INFO)
         print(Helpers.RESET)
 
     @staticmethod
@@ -218,8 +233,6 @@ class Helpers:
         if shell is None:
             shell = isWin and not isUnix
         try:
-            # out = subprocess.check_output(cmd, shell=shell)
-            # return False, str(out, "UTF-8")
             sp = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             has_errors = False
             while True:
@@ -232,8 +245,7 @@ class Helpers:
                     break
                 elif "BUILD" in line and "FAILED" in line:
                     return True, "Build failed with status code {}".format(sp.returncode)
-                print(line)
-
+                Helpers.print_with_stamp(msg=line, status=Helpers.MSG_INFO)
             if sp.returncode != 0 and sp.returncode is not None and has_errors:
                 return True, "Build failed with status code {}".format(sp.returncode)
             return False, ""
@@ -256,6 +268,9 @@ class Helpers:
         elif not os.path.exists(CONFIG_FILE):
             Helpers.create_config()
             raise interfaces.BuildToolError("Build Tool not configured")
+
+        if not os.path.exists(LOGS):
+            os.mkdir(LOGS)
 
     # @staticmethod
     # def send_notification(msg):

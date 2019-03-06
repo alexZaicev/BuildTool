@@ -19,8 +19,8 @@ def main():
         worker_3 = WorkerThread(3)
 
         worker_1.start()
-        worker_2.start()
-        worker_3.start()
+        # worker_2.start()
+        # worker_3.start()
 
         while True:
             scheduler.run_pending()

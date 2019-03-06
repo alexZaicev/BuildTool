@@ -20,7 +20,7 @@ class Command(ABC):
         ABC.__init__(self)
 
     @abstractmethod
-    def execute(self, cfg=None, worker_id=0):
+    def execute(self, cfg=None, worker_id=0, logger=None):
         raise BuildToolError("Command executor is not implemented")
 
 
@@ -45,7 +45,7 @@ class Rule(ABC):
         ABC.__init__(self)
 
     @abstractmethod
-    def execute_rule(self, cfg, worker_id):
+    def execute_rule(self, cfg, worker_id, logger):
         raise BuildToolError("Rule logic has not been implemented")
 
 
@@ -77,7 +77,7 @@ class PreBuildRule(Rule):
         Helpers.PRE_BUILD_RULES.append(self)
 
     @abstractmethod
-    def execute_rule(self, cfg, worker_id):
+    def execute_rule(self, cfg, worker_id, logger):
         raise BuildToolError("Rule logic has not been implemented")
 
 
@@ -96,7 +96,7 @@ class PostBuildRule(Rule):
         Helpers.POST_BUILD_RULES.append(self)
 
     @abstractmethod
-    def execute_rule(self, cfg, worker_id):
+    def execute_rule(self, cfg, worker_id, logger):
         raise BuildToolError("Rule logic has not been implemented")
 
 
@@ -110,7 +110,7 @@ class Job(ABC):
         self.cfg = cfg
 
     @abstractmethod
-    def work(self, worker_id):
+    def work(self, worker_id, logger):
         raise BuildToolError("Job work not implemented")
 
 
@@ -124,16 +124,24 @@ class JobContainer(object):
 
     def execute_job_set(self, worker_id):
         from helpers import WORKSPACE
+        from logger import Logger
+        logger = Logger(name="{}_{}".format(Helpers.get_repo_name(self.cfg["name"]), worker_id))
         p = os.path.join(WORKSPACE, "{}_{}".format(Helpers.get_repo_name(self.cfg["name"]), worker_id))
         if os.path.exists(p):
+            logger.printer(msg="Removing previous workspace directory", msg_type=Helpers.MSG_INFO)
             Helpers.remove_dir(p)
         os.mkdir(p)
+
+        logger.printer(msg="WORKER {} INITIALIZED. Building....".format(worker_id), msg_type=Helpers.MSG_INFO)
         try:
             for job in self.jobs:
-                job.work(worker_id)
+                job.work(worker_id=worker_id, logger=logger)
             Helpers.print_build_status(failed=False)
+            logger.printer(msg="BUILD SUCCESS", msg_type=Helpers.MSG_INFO)
         except BuildToolError as ex:
             Helpers.print_build_status(msg=str(ex))
+            logger.printer(msg="BUILD FAILED", msg_type=Helpers.MSG_ERR)
+        logger.kill()
 
 
 class JobInitializer(Initializer):
@@ -156,7 +164,7 @@ class JobInitializer(Initializer):
                 """
                     SCHEDULER
                 """
-                schedule.every(cfg["timer"]).minutes.do(Helpers.JOBS.put, jc.execute_job_set)
+                schedule.every(cfg["timer"]).seconds.do(Helpers.JOBS.put, jc.execute_job_set)
             except AttributeError:
                 raise BuildToolError("Unknown job type %s specified in configuration file" % cfg["type"])
         return schedule
