@@ -277,7 +277,7 @@ class TnsTestIosCommand(Command):
                     logger.printer("iOS test is disabled in configuration file. Enable it and re-run the build",
                                    Helpers.MSG_INFO)
             else:
-                logger.printer("iOS build cannot be performed on Windows platform", Helpers.MSG_ERR)
+                logger.printer("iOS build cannot be performed on Linux platform", Helpers.MSG_ERR)
         else:
             logger.printer("iOS test cannot be performed on Windows platform", Helpers.MSG_ERR)
 
@@ -297,7 +297,15 @@ class TnsBuildAndroidBundle(Command):
 class TnsBuildIosBundle(Command):
 
     def execute(self, cfg=None, worker_id=0, logger=None):
-        pass
+        from helpers import isWin, isUnix
+        if isUnix and not isWin:
+            import sys
+            if "darwin" in sys.platform.lower():
+                pass
+            else:
+                logger.printer("iOS build cannot be performed on Linux platform", Helpers.MSG_ERR)
+        else:
+            logger.printer("iOS test cannot be performed on Windows platform", Helpers.MSG_ERR)
 
     def __init__(self):
         Command.__init__(self)
@@ -315,7 +323,15 @@ class TnsBuildBundleUglifyAndroid(Command):
 class TnsBuildBundleUglifyIos(Command):
 
     def execute(self, cfg=None, worker_id=0, logger=None):
-        pass
+        from helpers import isWin, isUnix
+        if isUnix and not isWin:
+            import sys
+            if "darwin" in sys.platform.lower():
+                pass
+            else:
+                logger.printer("iOS build cannot be performed on Linux platform", Helpers.MSG_ERR)
+        else:
+            logger.printer("iOS test cannot be performed on Windows platform", Helpers.MSG_ERR)
 
     def __init__(self):
         Command.__init__(self)
