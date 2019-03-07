@@ -148,27 +148,40 @@ class JobContainer(object):
 
         logger = Logger(name="{}_{}".format(self.cfg["name"], worker_id))
         p = os.path.join(WORKSPACE, "{}_{}".format(self.cfg["name"], worker_id))
+        failed = False
         if os.path.exists(p):
             logger.printer(msg="Removing previous workspace directory", msg_type=Helpers.MSG_INFO)
             try:
                 Helpers.remove_dir(p)
+                try:
+                    os.mkdir(p)
+                except FileExistsError:
+                    # retry
+                    Helpers.remove_dir(p)
+                    os.mkdir(p)
             except BuildToolFileAccessError:
-                new_name = "{}_{}".format(self.cfg["name"], "AccessDeniedCopy")
-                self.cfg["name"] = new_name
-                p = os.path.join(WORKSPACE, "{}_{}".format(self.cfg["name"], worker_id))
-                logger.printer(msg="Workspace %s is locked and cannot be removed. Changing workspace name to %s" % (
-                    "{}_{}".format(self.cfg["name"], "AccessDeniedCopy"), new_name), msg_type=Helpers.MSG_WARNING)
-        os.mkdir(p)
+                # TODO
+                failed = True
+                logger.printer(
+                    msg="File or directory [%s] is current ly being used by another process and cannot be access"
+                        % self.cfg["name"], msg_type=Helpers.MSG_ERR)
+            except FileExistsError:
+                failed = True
+                logger.printer(msg="Build Tool failed to remove file or directory for build [%s]" % self.cfg["name"],
+                               msg_type=Helpers.MSG_ERR)
 
-        logger.printer(msg="WORKER {} INITIALIZED. Building....".format(worker_id), msg_type=Helpers.MSG_INFO)
-        try:
-            for job in self.jobs:
-                job.work(worker_id=worker_id, logger=logger)
-            Helpers.print_build_status(failed=False)
-            logger.printer(msg="BUILD SUCCESS", msg_type=Helpers.MSG_INFO)
-        except BuildToolError as ex:
-            Helpers.print_build_status(msg=str(ex))
-            logger.printer(msg="BUILD FAILED", msg_type=Helpers.MSG_ERR)
+        if not failed:
+            logger.printer(msg="WORKER {} INITIALIZED. Building....".format(worker_id), msg_type=Helpers.MSG_INFO)
+            try:
+                for job in self.jobs:
+                    job.work(worker_id=worker_id, logger=logger)
+                Helpers.print_build_status(failed=False)
+                logger.printer(msg="BUILD SUCCESS", msg_type=Helpers.MSG_INFO)
+            except BuildToolError as ex:
+                Helpers.print_build_status(msg=str(ex))
+                logger.printer(msg="BUILD FAILED", msg_type=Helpers.MSG_ERR)
+        else:
+            logger.printer(msg="Build Tool failed to start job %s" % self.cfg["name"], msg_type=Helpers.MSG_ERR)
         logger.kill()
 
 
@@ -260,9 +273,14 @@ class WorkerThread(Thread):
     def __init__(self, worker_id):
         Thread.__init__(self)
         self.worker_id = worker_id
+        self.run_worker = False
 
     def run(self):
-        while True:
+        self.run_worker = True
+        while self.run_worker:
             executor = Helpers.JOBS.get()
             executor(self.worker_id)
             Helpers.JOBS.task_done()
+
+    def kill(self):
+        self.run_worker = False

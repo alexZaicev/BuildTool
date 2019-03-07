@@ -11,6 +11,11 @@ from helpers import Helpers
 from interfaces import BuildToolError, JobInitializer, WorkerThread
 
 
+worker_1 = WorkerThread(1)
+worker_2 = WorkerThread(2)
+worker_3 = WorkerThread(3)
+
+
 def main():
     """
         Main application start up method
@@ -26,10 +31,6 @@ def main():
         """
         job_init = JobInitializer()
         scheduler = job_init.initialize()
-
-        worker_1 = WorkerThread(1)
-        worker_2 = WorkerThread(2)
-        worker_3 = WorkerThread(3)
 
         worker_1.start()
         # worker_2.start()
@@ -49,4 +50,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        worker_1.kill()
+        worker_2.kill()
+        worker_3.kill()
+        Helpers.print_with_stamp("Build Tool Interrupted", status=Helpers.MSG_WARNING)

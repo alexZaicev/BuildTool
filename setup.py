@@ -25,6 +25,6 @@ setup(
     author="alexZaicev",
     author_email="alex.zaicef@gmail.com",
     packages="BuildTool",
-    install_requires=["win10toast", "pync", "schedule"],
+    install_requires=["schedule"],
     long_description=long_description
 )

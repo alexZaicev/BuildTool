@@ -150,7 +150,7 @@ class Helpers:
             if isWin:
                 failed, out = Helpers.perform_command(("rmdir", "/Q", "/S", name), shell=True)
             elif isUnix:
-                failed, out = Helpers.perform_command(("rmdir", "/Q", "/S", name), shell=True)
+                failed, out = Helpers.perform_command(("rm", "-rf", name))
             if failed:
                 if "ACCESS" in out:
                     raise BuildToolFileAccessError()
@@ -174,7 +174,7 @@ class Helpers:
             if isWin:
                 failed, out = Helpers.perform_command(("del", "/f", name), shell=True)
             elif isUnix:
-                failed, out = Helpers.perform_command(("rm", "-f", name), shell=True)
+                failed, out = Helpers.perform_command(("rm", "-f", name))
             if failed:
                 if "ACCESS" in out:
                     raise BuildToolFileAccessError()
