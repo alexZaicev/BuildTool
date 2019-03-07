@@ -5,7 +5,7 @@
     Copyright 2019
 """
 
-from easypro_rules import EasyProRulePreBuild
+from easypro_rules import EasyProRulePreBuild, EasyProRulePostBuild
 
 
 def init():
@@ -16,3 +16,4 @@ def init():
     """
 
     EasyProRulePreBuild()
+    EasyProRulePostBuild()

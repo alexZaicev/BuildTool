@@ -36,7 +36,7 @@ class Logger(object):
         """
 
         self.file_out.write(
-            "%s   ---   %s   ---   %s\r" % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), msg_type, msg))
+            "%s   ---   %s   ---   %s\r\n" % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), msg_type, msg))
         Helpers.print_with_stamp(msg, msg_type)
 
     def kill(self):

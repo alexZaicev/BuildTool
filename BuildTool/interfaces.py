@@ -18,6 +18,12 @@ class BuildToolError(Exception):
     """
 
 
+class BuildToolFileAccessError(Exception):
+    """
+        Build Tool File Access exception
+    """
+
+
 class Command(ABC):
     """
         Built Tool command object to store command execution logic
@@ -139,11 +145,19 @@ class JobContainer(object):
     def execute_job_set(self, worker_id):
         from helpers import WORKSPACE
         from logger import Logger
-        logger = Logger(name="{}_{}".format(Helpers.get_repo_name(self.cfg["name"]), worker_id))
-        p = os.path.join(WORKSPACE, "{}_{}".format(Helpers.get_repo_name(self.cfg["name"]), worker_id))
+
+        logger = Logger(name="{}_{}".format(self.cfg["name"], worker_id))
+        p = os.path.join(WORKSPACE, "{}_{}".format(self.cfg["name"], worker_id))
         if os.path.exists(p):
             logger.printer(msg="Removing previous workspace directory", msg_type=Helpers.MSG_INFO)
-            Helpers.remove_dir(p)
+            try:
+                Helpers.remove_dir(p)
+            except BuildToolFileAccessError:
+                new_name = "{}_{}".format(self.cfg["name"], "AccessDeniedCopy")
+                self.cfg["name"] = new_name
+                p = os.path.join(WORKSPACE, "{}_{}".format(self.cfg["name"], worker_id))
+                logger.printer(msg="Workspace %s is locked and cannot be removed. Changing workspace name to %s" % (
+                    "{}_{}".format(self.cfg["name"], "AccessDeniedCopy"), new_name), msg_type=Helpers.MSG_WARNING)
         os.mkdir(p)
 
         logger.printer(msg="WORKER {} INITIALIZED. Building....".format(worker_id), msg_type=Helpers.MSG_INFO)
@@ -195,14 +209,7 @@ class JobInitializer(Initializer):
         if cfg["name"] is None or len(cfg["name"]) == 0:
             raise BuildToolError("Invalid build name. Check your configuration file and re-run Build Tool")
         # CHECK FOR GIT CONFIG
-        if cfg["repository"] is not None and \
-                cfg["username"] is not None and \
-                cfg["token"] is not None:
-            if cfg["branch"] is None or type(cfg["branch"]) != str or len(cfg["branch"]) == 0:
-                cfg["branch"] = "master"
-            list_jobs.append(jobs.GitJob(cfg["name"], cfg=cfg))
-        else:
-            raise BuildToolError("Cannot create Git job. Check your configuration file and re-run Build Tool")
+        list_jobs.append(JobInitializer.__init_git_job(cfg))
         # CHECK FOR {NS} CONFIG
         if cfg["android"]["build"] is not None and \
                 cfg["android"]["test"] is not None and \
@@ -217,6 +224,24 @@ class JobInitializer(Initializer):
             else:
                 raise BuildToolError("Cannot create {NS} job. Check your configuration file and re-run Build Tool")
         return list_jobs
+
+    @classmethod
+    def __init_git_job(cls, cfg):
+        """
+
+        :param cfg:
+        :return:
+        """
+
+        import jobs
+        if cfg["repository"] is not None and \
+                cfg["username"] is not None and \
+                cfg["token"] is not None:
+            if cfg["branch"] is None or type(cfg["branch"]) != str or len(cfg["branch"]) == 0:
+                cfg["branch"] = "master"
+            return jobs.GitJob(cfg["name"], cfg=cfg)
+        else:
+            raise BuildToolError("Cannot create Git job. Check your configuration file and re-run Build Tool")
 
     @classmethod
     def __check_timer(cls, cfg):

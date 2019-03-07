@@ -35,7 +35,10 @@ class CommandFactory(Utils):
             Helpers.CMD_TNS_BUILD_ANDROID: TnsBuildAndroidCommand,
             Helpers.CMD_TNS_BUILD_IOS: TnsBuildIosCommand,
             Helpers.CMD_TNS_TEST_ANDROID: TnsTestAndroidCommand,
-            Helpers.CMD_TNS_TEST_IOS: TnsTestIosCommand
+            Helpers.CMD_TNS_TEST_IOS: TnsTestIosCommand,
+            Helpers.CMD_TNS_DOCTOR: TnsDoctorCommand,
+            Helpers.CMD_TNS_BUNDLE_ANDROID: TnsBuildAndroidBundleCommand,
+            Helpers.CMD_TNS_BUNDLE_IOS: TnsBuildIosBundleCommand
         }
         try:
             return commands.get(cmd_type)()
@@ -54,7 +57,7 @@ class GitCloneCommand(Command):
 
         git_url = Helpers.parse_repo(cfg["repository"], cfg["username"], cfg["token"])
         path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
-        failed, out = Helpers.perform_command(cmd=Helpers.cmd_list("git clone %s %s" % (git_url, path)))
+        failed, out = Helpers.perform_command(cmd=Helpers.cmd_list("git clone %s %s" % (git_url, path)), logger=logger)
         if failed:
             raise BuildToolError(
                 "Failed to clone repository: %s." % cfg["repository"])
@@ -75,7 +78,7 @@ class GitFetchCommand(Command):
         logger.printer("STARTING GIT FETCH", Helpers.MSG_INFO)
         path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id),
                             ".git")
-        failed, out = Helpers.perform_command(cmd=Helpers.cmd_list("git --git-dir=%s fetch" % path))
+        failed, out = Helpers.perform_command(cmd=Helpers.cmd_list("git --git-dir=%s fetch" % path), logger=logger)
         if failed:
             raise BuildToolError("Failed to fetch from repository.")
         else:
@@ -95,7 +98,7 @@ class GitCheckoutCommand(Command):
         logger.printer("STARTING GIT CHECKOUT", Helpers.MSG_INFO)
         path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id), ".git")
         failed, out = Helpers.perform_command(
-            cmd=Helpers.cmd_list("git --git-dir=%s checkout %s" % (path, cfg["branch"])))
+            cmd=Helpers.cmd_list("git --git-dir=%s checkout %s" % (path, cfg["branch"])), logger=logger)
         if failed:
             raise BuildToolError(
                 "Failed to checkout to branch [%s]." % cfg["branch"])
@@ -116,7 +119,7 @@ class GitPullCommand(Command):
         logger.printer("STARTING GIT PULL", Helpers.MSG_INFO)
         path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id), ".git")
         failed, out = Helpers.perform_command(
-            cmd=Helpers.cmd_list("git --git-dir=%s pull origin %s" % (path, cfg["branch"])))
+            cmd=Helpers.cmd_list("git --git-dir=%s pull origin %s" % (path, cfg["branch"])), logger=logger)
         if failed:
             raise BuildToolError(
                 "Failed to pull from branch [%s]." % cfg["branch"])
@@ -138,7 +141,7 @@ class TnsVersionCommand(Command):
         logger.printer("STARTING {NS} VERSION CHECK", Helpers.MSG_INFO)
         path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
         cmd = "tns --version --path {}".format(path)
-        failed, out = Helpers.perform_command(cmd=cmd, shell=True)
+        failed, out = Helpers.perform_command(cmd=cmd, shell=True, logger=logger)
         if failed:
             raise BuildToolError("Check if {NS} is installed on your machine")
         else:
@@ -159,7 +162,7 @@ class TnsInstallCommand(Command):
         logger.printer("STARTING {NS} INSTALL", Helpers.MSG_INFO)
         path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
         cmd = "tns install --path {}".format(path)
-        failed, out = Helpers.perform_command(cmd=cmd, shell=True)
+        failed, out = Helpers.perform_command(cmd=cmd, shell=True, logger=logger)
         if failed:
             raise BuildToolError("{NS} failed to install project dependencies")
         else:
@@ -181,14 +184,14 @@ class TnsBuildAndroidCommand(Command):
             logger.printer("STARTING BUILD ANDROID", Helpers.MSG_INFO)
             path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
             cmd = "tns build android --path {}".format(path)
-            failed, out = Helpers.perform_command(cmd=cmd, shell=True)
+            failed, out = Helpers.perform_command(cmd=cmd, shell=True, logger=logger)
             if failed:
                 raise BuildToolError("{NS} failed to build project for android")
             else:
                 logger.printer(out, Helpers.MSG_INFO)
         else:
             logger.printer("Android build is disabled in configuration file. Enable it and re-run the build",
-                           Helpers.MSG_INFO)
+                           Helpers.MSG_WARNING)
 
     def __init__(self):
         Command.__init__(self)
@@ -210,14 +213,14 @@ class TnsBuildIosCommand(Command):
                     logger.printer("STARTING BUILD IOS", Helpers.MSG_INFO)
                     path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
                     cmd = "tns build ios --path {}".format(path)
-                    failed, out = Helpers.perform_command(cmd=cmd, shell=True)
+                    failed, out = Helpers.perform_command(cmd=cmd, shell=True, logger=logger)
                     if failed:
                         raise BuildToolError("{NS} failed to build project for iOS")
                     else:
                         logger.printer(out, Helpers.MSG_INFO)
                 else:
                     logger.printer("iOS build is disabled in configuration file. Enable it and re-run the build",
-                                   Helpers.MSG_INFO)
+                                   Helpers.MSG_WARNING)
             else:
                 logger.printer("iOS build cannot be performed on Linux platform", Helpers.MSG_ERR)
         else:
@@ -239,14 +242,14 @@ class TnsTestAndroidCommand(Command):
             logger.printer("STARTING TEST ANDROID", Helpers.MSG_INFO)
             path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
             cmd = "tns test android --path {}".format(path)
-            failed, out = Helpers.perform_command(cmd=cmd, shell=True)
+            failed, out = Helpers.perform_command(cmd=cmd, shell=True, logger=logger)
             if failed:
                 raise BuildToolError("{NS} failed to test project for android")
             else:
                 logger.printer(out, Helpers.MSG_INFO)
         else:
             logger.printer("Android test is disabled in configuration file. Enable it and re-run the build",
-                           Helpers.MSG_INFO)
+                           Helpers.MSG_WARNING)
 
     def __init__(self):
         Command.__init__(self)
@@ -268,14 +271,14 @@ class TnsTestIosCommand(Command):
                     logger.printer("STARTING TEST IOS", Helpers.MSG_INFO)
                     path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
                     cmd = "tns test ios --path {}".format(path)
-                    failed, out = Helpers.perform_command(cmd=cmd, shell=True)
+                    failed, out = Helpers.perform_command(cmd=cmd, shell=True, logger=logger)
                     if failed:
                         raise BuildToolError("{NS} failed to test project for iOS")
                     else:
                         logger.printer(out, Helpers.MSG_INFO)
                 else:
                     logger.printer("iOS test is disabled in configuration file. Enable it and re-run the build",
-                                   Helpers.MSG_INFO)
+                                   Helpers.MSG_WARNING)
             else:
                 logger.printer("iOS build cannot be performed on Linux platform", Helpers.MSG_ERR)
         else:
@@ -285,23 +288,71 @@ class TnsTestIosCommand(Command):
         Command.__init__(self)
 
 
-class TnsBuildAndroidBundle(Command):
+class TnsBuildAndroidBundleCommand(Command):
 
     def execute(self, cfg=None, worker_id=0, logger=None):
-        pass
+        # ANDROID WEBPACK BUNDLE
+        if cfg["android"]["build"]:
+            if cfg["android"]["webpack"] is not None:
+                if cfg["android"]["webpack"]["bundle"]:
+                    logger.printer("STARTING BUNDLE ANDROID", Helpers.MSG_INFO)
+                    path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
+                    if cfg["android"]["webpack"]["uglify"]:
+                        logger.printer("UGLIFY ENABLED", Helpers.MSG_INFO)
+                        cmd = "tns build android --bundle --env.uglify --path {}".format(path)
+                    else:
+                        cmd = "tns build android --bundle --path {}".format(path)
+
+                    failed, out = Helpers.perform_command(cmd=cmd, shell=True, logger=logger)
+                    if failed:
+                        raise BuildToolError("{NS} failed to bundle project for Android")
+                    else:
+                        logger.printer(out, Helpers.MSG_INFO)
+
+                else:
+                    logger.printer("Android webpack bundle is disabled. Skipping...", Helpers.MSG_WARNING)
+            else:
+                logger.printer("Android webpack bundle not configured. Skipping...", Helpers.MSG_WARNING)
+        else:
+            logger.printer("Android build is disabled in configuration file. Enable it and re-run the build",
+                           Helpers.MSG_WARNING)
 
     def __init__(self):
         Command.__init__(self)
 
 
-class TnsBuildIosBundle(Command):
+class TnsBuildIosBundleCommand(Command):
 
     def execute(self, cfg=None, worker_id=0, logger=None):
+        # IOS WEBPACK BUNDLE
         from helpers import isWin, isUnix
         if isUnix and not isWin:
             import sys
             if "darwin" in sys.platform.lower():
-                pass
+                if cfg["ios"]["build"]:
+                    if cfg["ios"]["webpack"] is not None:
+                        if cfg["ios"]["webpack"]["bundle"]:
+                            logger.printer("STARTING BUNDLE IOS", Helpers.MSG_INFO)
+                            path = os.path.join(WORKSPACE, "{}_{}".format(cfg["name"], worker_id))
+                            if cfg["ios"]["webpack"]["uglify"]:
+                                logger.printer("UGLIFY ENABLED", Helpers.MSG_INFO)
+                                cmd = "tns build ios --bundle --env.uglify --path {}".format(path)
+                            else:
+                                cmd = "tns build ios --bundle --path {}".format(path)
+
+                            failed, out = Helpers.perform_command(cmd=cmd, shell=True, logger=logger)
+                            if failed:
+                                raise BuildToolError("{NS} failed to bundle project for iOS")
+                            else:
+                                logger.printer(out, Helpers.MSG_INFO)
+
+                        else:
+                            logger.printer("iOS webpack bundle is disabled. Skipping...", Helpers.MSG_WARNING)
+                    else:
+                        logger.printer("iOS webpack bundle not configured. Skipping...", Helpers.MSG_WARNING)
+                else:
+                    logger.printer("iOS build is disabled in configuration file. Enable it and re-run the build",
+                                   Helpers.MSG_WARNING)
             else:
                 logger.printer("iOS build cannot be performed on Linux platform", Helpers.MSG_ERR)
         else:
@@ -311,27 +362,17 @@ class TnsBuildIosBundle(Command):
         Command.__init__(self)
 
 
-class TnsBuildBundleUglifyAndroid(Command):
+class TnsDoctorCommand(Command):
 
     def execute(self, cfg=None, worker_id=0, logger=None):
-        pass
-
-    def __init__(self):
-        Command.__init__(self)
-
-
-class TnsBuildBundleUglifyIos(Command):
-
-    def execute(self, cfg=None, worker_id=0, logger=None):
-        from helpers import isWin, isUnix
-        if isUnix and not isWin:
-            import sys
-            if "darwin" in sys.platform.lower():
-                pass
-            else:
-                logger.printer("iOS build cannot be performed on Linux platform", Helpers.MSG_ERR)
+        # Telerik {NS} DOCTOR
+        logger.printer("STARTING {NS} DOCTOR", Helpers.MSG_INFO)
+        cmd = "tns doctor"
+        failed, out = Helpers.perform_command(cmd=cmd, shell=True, logger=logger)
+        if failed:
+            raise BuildToolError("{NS} failed to check {NS} development environment")
         else:
-            logger.printer("iOS test cannot be performed on Windows platform", Helpers.MSG_ERR)
+            logger.printer(out, Helpers.MSG_INFO)
 
     def __init__(self):
         Command.__init__(self)

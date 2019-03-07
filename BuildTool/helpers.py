@@ -11,6 +11,7 @@ import subprocess
 import sys
 from datetime import datetime
 import queue
+from collections import namedtuple
 
 # DIRECTORIES
 isWin = False
@@ -65,6 +66,9 @@ class Helpers:
     CMD_TNS_BUILD_IOS = "CMD_7"
     CMD_TNS_TEST_ANDROID = "CMD_8"
     CMD_TNS_TEST_IOS = "CMD_9"
+    CMD_TNS_DOCTOR = "CMD_10"
+    CMD_TNS_BUNDLE_ANDROID = "CMD_11"
+    CMD_TNS_BUNDLE_IOS = "CMD_12"
 
     # JOB TYPES
     JOB_GIT = "JOB_0"
@@ -72,6 +76,7 @@ class Helpers:
 
     MSG_INFO = "INFO"
     MSG_ERR = "ERROR"
+    MSG_WARNING = "WARNING"
 
     def __new__(cls, *args, **kwargs):
         from interfaces import BuildToolError
@@ -139,15 +144,18 @@ class Helpers:
             :param name: Directory path
         """
 
+        from interfaces import BuildToolFileAccessError, BuildToolError
+        failed, out = True, None
         try:
             if isWin:
-                out = str(subprocess.check_output(["rmdir", "/Q", "/S", name], shell=True), "UTF-8")
-                if len(out) > 0:
-                    Helpers.print_with_stamp(out, Helpers.MSG_INFO)
+                failed, out = Helpers.perform_command(("rmdir", "/Q", "/S", name), shell=True)
             elif isUnix:
-                out = str(subprocess.check_output(["rm", "-rf", name]), "UTF-8")
-                if len(out) > 0:
-                    Helpers.print_with_stamp(out, Helpers.MSG_INFO)
+                failed, out = Helpers.perform_command(("rmdir", "/Q", "/S", name), shell=True)
+            if failed:
+                if "ACCESS" in out:
+                    raise BuildToolFileAccessError()
+                else:
+                    raise BuildToolError("Failed to remove directory %s" % name)
         except subprocess.CalledProcessError:
             from interfaces import BuildToolError
             raise BuildToolError("Failed to remove directory %s" % name)
@@ -160,18 +168,28 @@ class Helpers:
             :param name: Directory path
         """
 
+        from interfaces import BuildToolFileAccessError, BuildToolError
+        failed, out = True, None
         try:
             if isWin:
-                out = str(subprocess.check_output(["del", "/f", name], shell=True), "UTF-8")
-                if len(out) > 0:
-                    Helpers.print_with_stamp(out, Helpers.MSG_INFO)
+                failed, out = Helpers.perform_command(("del", "/f", name), shell=True)
             elif isUnix:
-                out = str(subprocess.check_output(["rm", "-f", name]), "UTF-8")
-                if len(out) > 0:
-                    Helpers.print_with_stamp(out, Helpers.MSG_INFO)
+                failed, out = Helpers.perform_command(("rm", "-f", name), shell=True)
+            if failed:
+                if "ACCESS" in out:
+                    raise BuildToolFileAccessError()
+                else:
+                    raise BuildToolError("Failed to remove file %s" % name)
         except subprocess.CalledProcessError:
             from interfaces import BuildToolError
             raise BuildToolError("Failed to remove file %s" % name)
+
+    @staticmethod
+    def json_converter(data, typename):
+        def __json_object_hook(d):
+            return namedtuple(typename=typename, field_names=d.keys())(*d.values())
+
+        return json.load(data, object_hook=__json_object_hook)
 
     @staticmethod
     def create_config():
@@ -192,16 +210,24 @@ class Helpers:
                     "enabled": False,
                     "android": {
                         "build": False,
+                        "webpack": {
+                            "bundle": False,
+                            "uglify": False
+                        },
                         "test": False
                     },
                     "ios": {
                         "build": False,
+                        "webpack": {
+                            "bundle": False,
+                            "uglify": False
+                        },
                         "test": False
                     }
                 }
             ]
         }
-        with open(CONFIG_FILE, 'w') as f:
+        with open(CONFIG_FILE, 'w+') as f:
             json.dump(config, f, ensure_ascii=False)
         f.close()
 
@@ -212,10 +238,15 @@ class Helpers:
 
             :return: Configuration dictionary
         """
-
-        with open(CONFIG_FILE, "r") as f:
-            cfg = json.load(f)
-        f.close()
+        try:
+            with open(CONFIG_FILE, "r") as f:
+                cfg = json.load(f)
+            f.close()
+        except json.JSONDecodeError:
+            from interfaces import BuildToolError
+            raise BuildToolError(
+                "Build Tool failed to load configuration. Ensure you set" +
+                " your configuration correctly and re-run the Build Tool")
         return cfg
 
     @staticmethod
@@ -240,42 +271,49 @@ class Helpers:
         if failed:
             if msg is not None:
                 Helpers.print_with_stamp(msg, Helpers.MSG_ERR)
-            Helpers.print_with_stamp("\n\n%s  BUILD FAILED\n" % Helpers.RED, Helpers.MSG_ERR)
+            Helpers.print_with_stamp("%sBUILD FAILED" % Helpers.RED, Helpers.MSG_ERR)
         else:
             if msg is not None:
                 Helpers.print_with_stamp(msg, Helpers.MSG_INFO)
-            Helpers.print_with_stamp("\n\n%s BUILD SUCCESS\n" % Helpers.GREEN, Helpers.MSG_INFO)
+            Helpers.print_with_stamp("%sBUILD SUCCESS" % Helpers.GREEN, Helpers.MSG_INFO)
         print(Helpers.RESET)
 
     @staticmethod
-    def perform_command(cmd=tuple(), shell=None):
+    def perform_command(cmd=tuple(), shell=None, logger=None):
         """
             Shell command executor
 
             :param cmd: Command, option and argument list
             :param shell:  Is shell command
+            :param logger: Worker logger
         """
         if shell is None:
             shell = isWin and not isUnix
         try:
             sp = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            has_errors = False
             while True:
                 if sp.stderr is not None:
                     line = sp.stderr.readline()
                     if line:
-                        has_errors = True
-                line = str(sp.stdout.readline(), "UTF-8")
+                        if sp.returncode != 0 and sp.returncode is not None:
+                            return True, "Build failed with status code {}".format(sp.returncode)
+
+                line = str(sp.stdout.readline(), "UTF-8")[:-1]
                 if not line:
                     break
                 elif "BUILD" in line and "FAILED" in line:
                     return True, "Build failed with status code {}".format(sp.returncode)
-                Helpers.print_with_stamp(msg=line, status=Helpers.MSG_INFO)
-            if sp.returncode != 0 and sp.returncode is not None and has_errors:
-                return True, "Build failed with status code {}".format(sp.returncode)
-            return False, ""
+                elif "process cannot access the file" in line:
+                    return True, "ACCESS"
+
+                if len(line) > 0:
+                    if logger is None:
+                        Helpers.print_with_stamp(msg=line, status=Helpers.MSG_INFO)
+                    else:
+                        logger.printer(msg=line, msg_type=Helpers.MSG_INFO)
         except subprocess.CalledProcessError as ex:
             return True, str(ex)
+        return False, ""
 
     @staticmethod
     def check_dirs():

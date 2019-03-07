@@ -8,6 +8,7 @@
 from commands import CommandFactory
 from helpers import Helpers
 from interfaces import Job
+import time
 
 
 class GitJob(Job):
@@ -42,19 +43,38 @@ class TnsJob(Job):
     """
 
     def work(self, worker_id, logger):
+        from interfaces import BuildToolError
+
         cmd = CommandFactory.get_command(Helpers.CMD_TNS_VERSION)
         cmd.execute(self.cfg, worker_id, logger)
+
+        cmd = CommandFactory.get_command(Helpers.CMD_TNS_DOCTOR)
+        cmd.execute(self.cfg, worker_id, logger)
+
         cmd = CommandFactory.get_command(Helpers.CMD_TNS_INSTALL)
         cmd.execute(self.cfg, worker_id, logger)
 
-        Helpers.execute_pre_build_rules(self.cfg, worker_id, logger)
+        try:
+            Helpers.execute_pre_build_rules(self.cfg, worker_id, logger)
+            time.sleep(5)
+        except Exception:
+            raise BuildToolError("Build Tool failed to execute pre-build rule for build %s" % self.cfg["name"])
 
         cmd = CommandFactory.get_command(Helpers.CMD_TNS_BUILD_ANDROID)
         cmd.execute(self.cfg, worker_id, logger)
         cmd = CommandFactory.get_command(Helpers.CMD_TNS_BUILD_IOS)
         cmd.execute(self.cfg, worker_id, logger)
 
-        Helpers.execute_post_build_rules(self.cfg, worker_id, logger)
+        try:
+            Helpers.execute_post_build_rules(self.cfg, worker_id, logger)
+            time.sleep(5)
+        except Exception:
+            raise BuildToolError("Build Tool failed to execute post-build rule for build %s" % self.cfg["name"])
+
+        cmd = CommandFactory.get_command(Helpers.CMD_TNS_BUNDLE_ANDROID)
+        cmd.execute(self.cfg, worker_id, logger)
+        cmd = CommandFactory.get_command(Helpers.CMD_TNS_BUNDLE_IOS)
+        cmd.execute(self.cfg, worker_id, logger)
 
         cmd = CommandFactory.get_command(Helpers.CMD_TNS_TEST_ANDROID)
         cmd.execute(self.cfg, worker_id, logger)
