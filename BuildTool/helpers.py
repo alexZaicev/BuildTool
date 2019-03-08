@@ -314,17 +314,6 @@ class Helpers:
                         Helpers.print_with_stamp(msg=line, status=Helpers.MSG_INFO)
                     else:
                         logger.printer(msg=line, msg_type=Helpers.MSG_INFO)
-                if "xcopy" in cmd[0]:
-                    time.sleep(2)
-                    line = str(sp.stdout.readline(), "UTF-8")[:-1]
-                    if len(line) > 0:
-                        if logger is None:
-                            Helpers.print_with_stamp(msg=line, status=Helpers.MSG_INFO)
-                        else:
-                            logger.printer(msg=line, msg_type=Helpers.MSG_INFO)
-                    sp.stdin.write("D\n".encode("UTF-8"))
-                    # sp.stdin.write("D")
-                # time.sleep(2)
             sp.kill()
         except subprocess.CalledProcessError as ex:
             return True, str(ex)

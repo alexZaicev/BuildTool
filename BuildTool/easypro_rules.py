@@ -48,7 +48,7 @@ class EasyProRulePostBuild(PostBuildRule):
                     else:
                         destination = "C:\\Users\\{}\\AppBuildFiles\\iOS".format(os.environ.get('USERNAME'))
                     out_dir = os.path.join(destination, cfg["name"])
-                    cmd = "xcopy {} {} /s/h/e/k/f/c".format(path, out_dir)
+                    cmd = "xcopy {} {} /E /C /I /Y".format(path, out_dir)
                 else:
                     if i == 0:
                         destination = "/Users/{}/AppBuildFiles/Android"
