@@ -6,6 +6,7 @@
 """
 
 import os
+import time
 from abc import ABC, abstractmethod
 from threading import Thread
 
@@ -205,7 +206,7 @@ class JobInitializer(Initializer):
                 """
                     SCHEDULER
                 """
-                schedule.every(cfg["timer"]).seconds.do(Helpers.JOBS.put, jc.execute_job_set)
+                schedule.every(cfg["timer"]).minutes.do(Helpers.JOBS.put, jc.execute_job_set)
             except AttributeError:
                 raise BuildToolError("Unknown job type %s specified in configuration file" % cfg["type"])
         return schedule
@@ -281,6 +282,7 @@ class WorkerThread(Thread):
             executor = Helpers.JOBS.get()
             executor(self.worker_id)
             Helpers.JOBS.task_done()
+            time.sleep(10)
 
     def kill(self):
         self.run_worker = False

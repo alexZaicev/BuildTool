@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime
 import queue
 from collections import namedtuple
@@ -238,12 +239,13 @@ class Helpers:
 
             :return: Configuration dictionary
         """
+
+        from interfaces import BuildToolError
         try:
             with open(CONFIG_FILE, "r") as f:
                 cfg = json.load(f)
             f.close()
-        except json.JSONDecodeError:
-            from interfaces import BuildToolError
+        except json.JSONDecodeError or FileNotFoundError:
             raise BuildToolError(
                 "Build Tool failed to load configuration. Ensure you set" +
                 " your configuration correctly and re-run the Build Tool")
@@ -290,7 +292,8 @@ class Helpers:
         if shell is None:
             shell = isWin and not isUnix
         try:
-            sp = subprocess.Popen(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            sp = subprocess.Popen(cmd, shell=shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT)
             while True:
                 if sp.stderr is not None:
                     line = sp.stderr.readline()
@@ -299,7 +302,7 @@ class Helpers:
                             return True, "Build failed with status code {}".format(sp.returncode)
 
                 line = str(sp.stdout.readline(), "UTF-8")[:-1]
-                if not line:
+                if not line and sp.poll() is not None:
                     break
                 elif "BUILD" in line and "FAILED" in line:
                     return True, "Build failed with status code {}".format(sp.returncode)
@@ -311,6 +314,18 @@ class Helpers:
                         Helpers.print_with_stamp(msg=line, status=Helpers.MSG_INFO)
                     else:
                         logger.printer(msg=line, msg_type=Helpers.MSG_INFO)
+                if "xcopy" in cmd[0]:
+                    time.sleep(2)
+                    line = str(sp.stdout.readline(), "UTF-8")[:-1]
+                    if len(line) > 0:
+                        if logger is None:
+                            Helpers.print_with_stamp(msg=line, status=Helpers.MSG_INFO)
+                        else:
+                            logger.printer(msg=line, msg_type=Helpers.MSG_INFO)
+                    sp.stdin.write("D\n".encode("UTF-8"))
+                    # sp.stdin.write("D")
+                # time.sleep(2)
+            sp.kill()
         except subprocess.CalledProcessError as ex:
             return True, str(ex)
         return False, ""

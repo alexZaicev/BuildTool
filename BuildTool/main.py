@@ -35,7 +35,7 @@ def main():
         worker_1.start()
         # worker_2.start()
         # worker_3.start()
-
+        scheduler.run_all(60)
         while True:
             """ Build tool loop
             """
@@ -50,10 +50,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        worker_1.kill()
-        worker_2.kill()
-        worker_3.kill()
-        Helpers.print_with_stamp("Build Tool Interrupted", status=Helpers.MSG_WARNING)
+    main()

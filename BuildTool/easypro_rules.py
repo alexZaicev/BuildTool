@@ -36,18 +36,24 @@ class EasyProRulePostBuild(PostBuildRule):
                     path = os.path.join(base_dir, "platforms", "android", "app", "build", "outputs", "apk")
             else:
                 if cfg["ios"]["build"]:
-                    path = ""
+                    pass
 
             if path is not None:
                 if not os.path.exists(path):
                     raise FileNotFoundError("Output build files not found")
 
                 if isWin:
-                    destination = os.path.join("C:", "AppBuildFiles")
+                    if i == 0:
+                        destination = "C:\\Users\\{}\\AppBuildFiles\\Android".format(os.environ.get('USERNAME'))
+                    else:
+                        destination = "C:\\Users\\{}\\AppBuildFiles\\iOS".format(os.environ.get('USERNAME'))
                     out_dir = os.path.join(destination, cfg["name"])
                     cmd = "xcopy {} {} /s/h/e/k/f/c".format(path, out_dir)
                 else:
-                    destination = "/Users/{}/AppBuildFiles".format(os.environ.get('USERNAME'))
+                    if i == 0:
+                        destination = "/Users/{}/AppBuildFiles/Android"
+                    else:
+                        destination = "/Users/{}/AppBuildFiles/iOS"
                     out_dir = os.path.join(destination, cfg["name"])
                     cmd = "cp -a {} {}".format(path, out_dir)
                 if os.path.exists(destination):
@@ -55,7 +61,7 @@ class EasyProRulePostBuild(PostBuildRule):
                         Helpers.remove_dir(out_dir)
                 else:
                     os.mkdir(destination)
-                Helpers.perform_command(cmd, shell=True)
+                Helpers.perform_command(Helpers.cmd_list(cmd), shell=True, logger=logger)
 
     def __init__(self):
         PostBuildRule.__init__(self)
