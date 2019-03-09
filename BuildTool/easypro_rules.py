@@ -43,24 +43,34 @@ class EasyProRulePostBuild(PostBuildRule):
                     raise FileNotFoundError("Output build files not found")
 
                 if isWin:
+                    root = "C:\\Users\\{}\\AppBuildFiles".format(os.environ.get('USERNAME'))
+                    if not os.path.exists(root):
+                        os.mkdir(root)
+                    build_root = os.path.join(root, cfg["name"])
+                    if os.path.exists(build_root):
+                        Helpers.remove_dir(build_root)
+                    os.mkdir(build_root)
+
                     if i == 0:
-                        destination = "C:\\Users\\{}\\AppBuildFiles\\Android".format(os.environ.get('USERNAME'))
+                        destination = os.path.join(build_root, "Android")
                     else:
-                        destination = "C:\\Users\\{}\\AppBuildFiles\\iOS".format(os.environ.get('USERNAME'))
-                    out_dir = os.path.join(destination, cfg["name"])
-                    cmd = "xcopy {} {} /E /C /I /Y".format(path, out_dir)
+                        destination = os.path.join(build_root, "iOS")
+                    cmd = "xcopy {} {} /E /C /I /Y".format(path, destination)
                 else:
+                    root = "/Users/{}/AppBuildFiles".format(os.environ.get('USERNAME'))
+                    if not os.path.exists(root):
+                        os.mkdir(root)
+                    build_root = os.path.join(root, cfg["name"])
+                    if os.path.exists(build_root):
+                        Helpers.remove_dir(build_root)
+                    os.mkdir(build_root)
+
                     if i == 0:
-                        destination = "/Users/{}/AppBuildFiles/Android"
+                        destination = os.path.join(build_root, "Android")
                     else:
-                        destination = "/Users/{}/AppBuildFiles/iOS"
-                    out_dir = os.path.join(destination, cfg["name"])
-                    cmd = "cp -a {} {}".format(path, out_dir)
-                if os.path.exists(destination):
-                    if os.path.exists(out_dir):
-                        Helpers.remove_dir(out_dir)
-                else:
-                    os.mkdir(destination)
+                        destination = os.path.join(build_root, "iOS")
+                    cmd = "cp -a {} {}".format(path, destination)
+
                 Helpers.perform_command(Helpers.cmd_list(cmd), shell=True, logger=logger)
 
     def __init__(self):
