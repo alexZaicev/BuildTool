@@ -5,7 +5,7 @@
     Copyright 2019
 """
 
-import os
+import os, getpass
 
 from helpers import WORKSPACE, Helpers, isWin
 from interfaces import PreBuildRule, PostBuildRule
@@ -43,7 +43,7 @@ class EasyProRulePostBuild(PostBuildRule):
                     raise FileNotFoundError("Output build files not found")
 
                 if isWin:
-                    root = "C:\\Users\\{}\\AppBuildFiles".format(os.environ.get('USERNAME'))
+                    root = "C:\\Users\\{}\\AppBuildFiles".format(getpass.getuser())
                     if not os.path.exists(root):
                         os.mkdir(root)
                     build_root = os.path.join(root, cfg["name"])
@@ -57,7 +57,7 @@ class EasyProRulePostBuild(PostBuildRule):
                         destination = os.path.join(build_root, "iOS")
                     cmd = "xcopy {} {} /E /C /I /Y".format(path, destination)
                 else:
-                    root = "/Users/{}/AppBuildFiles".format(os.environ.get('USERNAME'))
+                    root = "/Users/{}/AppBuildFiles".format(getpass.getuser())
                     if not os.path.exists(root):
                         os.mkdir(root)
                     build_root = os.path.join(root, cfg["name"])
@@ -69,9 +69,9 @@ class EasyProRulePostBuild(PostBuildRule):
                         destination = os.path.join(build_root, "Android")
                     else:
                         destination = os.path.join(build_root, "iOS")
-                    cmd = "cp -a {} {}".format(path, destination)
-
-                Helpers.perform_command(Helpers.cmd_list(cmd), shell=True, logger=logger)
+                    cmd = "cp -a {}/. {}/".format(path, destination)
+                logger.printer(cmd, msg_type=Helpers.MSG_INFO)
+                Helpers.perform_command(cmd=Helpers.cmd_list(cmd), shell=isWin, logger=logger)
 
     def __init__(self):
         PostBuildRule.__init__(self)
